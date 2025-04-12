@@ -43,7 +43,7 @@ class Game:
         row, column = self._last_move
         # главная диагональ
         main_diagonal_line = 1
-        d = 1  # TODO зачем?
+        d = 1
         while row + d < Field.HEIGHT and column + d < Field.WIDTH and self._field[row + d][column + d] == self._field[row][column]:
             main_diagonal_line += 1
             d += 1
@@ -112,7 +112,7 @@ class Game:
     #     return []
 
 
-    def _print_field(self) -> None:  # TODO косячно выводит)))
+    def _print_field(self) -> None:
         """Выводит игровое поле на экран"""
 
         print("-" * (3 * Field.WIDTH + 1 * (Field.WIDTH + 1)))  # в каждой клетке по 3 символа, еще есть разделители
