@@ -36,7 +36,7 @@ class Game:
                 print("unexpected format. try again:")
 
 
-    def __check_game_state(self) -> GameStates:  # TODO можно проверять состояние игры после каждой проверки (я не русский), а не в конце за раз все. еще можно проверку по last_move прикрутить
+    def __check_game_state(self) -> GameStates:  # TODO можно проверять состояние игры после каждой проверки (я не русский), а не в конце за раз все
         """
         Проверяет состояние игры
         """
