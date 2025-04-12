@@ -98,11 +98,13 @@ class Game:
         return GameStates.CONTINUE
 
     def get_possible_actions(self):
-        empty_cells = []
-        for i in range(Field.HEIGHT):
-            for j in range(Field.WIDTH):
-                empty_cells.append((i, j))
-        return empty_cells
+        if not self.isTerminal():
+            empty_cells = []
+            for i in range(Field.HEIGHT):
+                for j in range(Field.WIDTH):
+                    empty_cells.append((i, j))
+            return empty_cells
+        return []
 
 
     def _print_field(self) -> None:
@@ -136,6 +138,23 @@ class Game:
                 self._reset_game()
         else:
             print("ur bad! try again")
+        
+    def is_terminal(self):
+        return self.__check_game_state() != GameStates.CONTINUE
+
+    def get_reward(self):
+        if self.isTerminal():
+            if self.__check_game_state() == GameStates.CROSS_WON:
+                return 1.0
+            elif self.__check_game_state() == GameStates.NAUGHT_WON:
+                return 0.0
+            else:
+                return 0.5
+        return None
+
+    def get_current_player(self):
+        return 1 if self._next_move == PlayerType.CROSS else -1
+
 
     def _reset_game(self) -> None:
         """reset"""
