@@ -8,7 +8,6 @@ class Field:
 
 
 class GameStates(Enum):
-    ERROR = -1
     CROSS_WON = 0
     NAUGHT_WON = 1
     CONTINUE = 2
