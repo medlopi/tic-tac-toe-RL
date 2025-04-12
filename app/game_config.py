@@ -1,10 +1,15 @@
 from enum import Enum
 
 
+PROGRAM_VERSION = 0.2
+PROGRAM_VERSION_DESCRIPTION = "console version. m, n, k -- arbitrary"
+# TODO NEXT VERSION: перевести вывод в консоль на какой-то ОДИН язык) ПРОСМОТРЕТЬ ВСЕ #TODO!!!!!
+
+
 class Field:
-    HEIGHT = 3
-    WIDTH = 3
-    STREAK_TO_WIN = 3
+    HEIGHT = 7
+    WIDTH = 7
+    STREAK_TO_WIN = 4
 
 
 class GameStates(Enum):
@@ -20,7 +25,7 @@ class PlayerType(Enum):
     NAUGHT = 1
 
 
-# TODO: Может тоже в класс вложить?
+# TODO в будущем как в лабе по плюсам имеет смысл это в отдельный класс выделить
 PlayerIcon: dict = {
     PlayerType.NONE: " ",
     PlayerType.CROSS: "X",

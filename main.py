@@ -2,8 +2,9 @@ from app.game import Game
 
 
 def main():
-    print("tic-tac-toe. dp_production.")
-    game: Game = Game()  # automatic start
+    game: Game = Game()
+    
+    game.start_game()
 
 
 if __name__ == "__main__":
