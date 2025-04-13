@@ -3,7 +3,7 @@ from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION
 
 
 class Game:
-    _next_move: PlayerType = PlayerType.CROSS
+    _who_moves: PlayerType = PlayerType.CROSS
     _field: list[list[PlayerType]] = [[PlayerType.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)]
     __free_cells_count: int = (Field.WIDTH * Field.HEIGHT)  # для быстрой проверки ничьей, TODO: сделать её умнее
     _last_move: Cell = Cell()
@@ -22,7 +22,7 @@ class Game:
         while True:  # TODO добавить возмножность завершать программу без помощи Ctrl + C :D
             try:
                 user_input = input(
-                    f"куда хотите походить? вы -- {PlayerIcon[self._next_move]} (строка и столбец через пробел): "
+                    f"куда хотите походить? вы -- {PlayerIcon[self._who_moves]} (строка и столбец через пробел): "
                 )
                 
                 row, column = map(int, user_input.split())
@@ -36,7 +36,7 @@ class Game:
                 print("unexpected format. try again:")
 
 
-    def check_win(self) -> bool:
+    def __check_win(self) -> bool:
         """
         Проверяет, закончилась ли игра победой
         """
@@ -67,8 +67,8 @@ class Game:
         """
         Проверяет состояние игры
         """
-        if self.check_win():
-            return (GameStates.CROSS_WON if self._next_move == PlayerType.CROSS else GameStates.NAUGHT_WON)
+        if self.__check_win():
+            return (GameStates.CROSS_WON if self._who_moves == PlayerType.CROSS else GameStates.NAUGHT_WON)
         if self.__free_cells_count == 0:
             return GameStates.TIE
         return GameStates.CONTINUE
@@ -102,14 +102,14 @@ class Game:
 
         if self._field[row][column] == PlayerType.NONE:
             self._last_move = Cell(row, column)
-            self._field[row][column] = self._next_move
+            self._field[row][column] = self._who_moves
             self.__free_cells_count -= 1
 
             self._print_field()
 
             game_status: GameStates = self.__check_game_state()
             if game_status == GameStates.CONTINUE:
-                self._next_move = PlayerType(abs(self._next_move.value - 1))
+                self._who_moves = PlayerType(abs(self._who_moves.value - 1))
 
                 self.__get_coordinates()
             elif game_status == GameStates.TIE:
@@ -141,13 +141,13 @@ class Game:
 
     # TODO зачем?
     # def get_current_player(self):
-    #     return 1 if self._next_move == PlayerType.CROSS else -1
+    #     return 1 if self._who_moves == PlayerType.CROSS else -1
 
 
     def _reset_game(self) -> None:
         """reset"""
 
-        self._next_move = PlayerType.CROSS
+        self._who_moves = PlayerType.CROSS
         self._last_move = Cell()
         self._field = [[PlayerType.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)]
         self.__free_cells_count = Field.WIDTH * Field.HEIGHT
