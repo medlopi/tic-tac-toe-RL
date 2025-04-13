@@ -75,6 +75,14 @@ class Game:
         if self.current_state.free_cells_count == 0:
             return GameStates.TIE
         return GameStates.CONTINUE
+    
+        
+    def convert_field_to_string(self) -> str:
+        result: str = ''
+        for row in range(Field.HEIGHT):
+            for col in range(Field.WIDTH):
+                result += str(self._field[row][col].value + 1)
+        return result
 
 
 
