@@ -1,4 +1,4 @@
-from app.game_config import Field, GameStates, PlayerType, PlayerIcon
+from app.game_config import Field, GameStates, PlayerType, PlayerIcon, Cell
 from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION
 
 
@@ -6,7 +6,7 @@ class Game:
     _next_move: PlayerType = PlayerType.CROSS
     _field: list[list[PlayerType]] = [[PlayerType.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)]
     __free_cells_count: int = (Field.WIDTH * Field.HEIGHT)  # для быстрой проверки ничьей, TODO: сделать её умнее
-    _last_move: tuple[int, int] = ()  # TODO как вам план отдельный класс для хранения координат написать? че то кринж какой то
+    _last_move: Cell = Cell()
 
 
     def __init__(self) -> None:
@@ -47,12 +47,12 @@ class Game:
         for direction in range(4):
             count = 1
             for _ in range(2):
-                row = self._last_move[0] + DIRECTIONS[direction][0]
-                col = self._last_move[1] + DIRECTIONS[direction][1]
+                row = self._last_move.row + DIRECTIONS[direction][0]
+                col = self._last_move.col + DIRECTIONS[direction][1]
                 while (
                     0 <= row < Field.HEIGHT and
                     0 <= col < Field.WIDTH and
-                    self._field[row][col] == self._field[self._last_move[0]][self._last_move[1]]
+                    self._field[row][col] == self._field[self._last_move.row][self._last_move.col]
                 ):
                     count += 1
                     row += DIRECTIONS[direction][0]
@@ -101,7 +101,7 @@ class Game:
         """Обрабатывает ходы"""
 
         if self._field[row][column] == PlayerType.NONE:
-            self._last_move = (row, column)
+            self._last_move = Cell(row, column)
             self._field[row][column] = self._next_move
             self.__free_cells_count -= 1
 
@@ -148,7 +148,7 @@ class Game:
         """reset"""
 
         self._next_move = PlayerType.CROSS
-        self._last_move = ()
+        self._last_move = Cell()
         self._field = [[PlayerType.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)]
         self.__free_cells_count = Field.WIDTH * Field.HEIGHT
 

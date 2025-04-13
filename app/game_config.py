@@ -12,6 +12,12 @@ class Field:
     STREAK_TO_WIN = 4
 
 
+class Cell:
+    def __init__(self, row=-1, col=-1):
+        self.row = row
+        self.col = col
+
+
 class GameStates(Enum):
     CROSS_WON = 0
     NAUGHT_WON = 1
