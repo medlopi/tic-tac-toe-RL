@@ -36,68 +36,41 @@ class Game:
                 print("unexpected format. try again:")
 
 
-    def __check_game_state(self) -> GameStates:  # TODO можно проверять состояние игры после каждой проверки (я не русский), а не в конце за раз все
+    def check_win(self) -> bool:
+        """
+        Проверяет, закончилась ли игра победой
+        """
+        DIRECTIONS = [
+            (-1, 0), (-1, 1), (0, 1), (1, 1),
+            (1, 0), (1, -1), (0, -1), (-1, -1)
+        ]
+        for direction in range(4):
+            count = 1
+            for _ in range(2):
+                row = self._last_move[0] + DIRECTIONS[direction][0]
+                col = self._last_move[1] + DIRECTIONS[direction][1]
+                while (
+                    0 <= row < Field.HEIGHT and
+                    0 <= col < Field.WIDTH and
+                    self._field[row][col] == self._field[self._last_move[0]][self._last_move[1]]
+                ):
+                    count += 1
+                    row += DIRECTIONS[direction][0]
+                    col += DIRECTIONS[direction][1]
+                direction = (direction + 4) % 8
+            if count >= Field.STREAK_TO_WIN:
+                return True
+        return False
+
+
+    def __check_game_state(self) -> GameStates:
         """
         Проверяет состояние игры
         """
-        row, column = self._last_move
-        # главная диагональ
-        main_diagonal_line = 1
-        d = 1
-        while row + d < Field.HEIGHT and column + d < Field.WIDTH and self._field[row + d][column + d] == self._field[row][column]:
-            main_diagonal_line += 1
-            d += 1
-
-        d = 1  
-        while row - d >= 0 and column - d >= 0 and self._field[row - d][column - d] == self._field[row][column]:
-            main_diagonal_line += 1
-            d += 1
-
-        # побочная диагональ
-        side_diagonal_line = 1
-        d = 1
-        while row + d < Field.HEIGHT and column - d >= 0 and self._field[row + d][column - d] == self._field[row][column]:
-            side_diagonal_line += 1
-            d += 1
-
-        d = 1 
-        while row - d >= 0 and column + d < Field.WIDTH and self._field[row - d][column + d] == self._field[row][column]:
-            side_diagonal_line += 1
-            d += 1
-
-        # Проверка вертикали
-        vertical_line = 1
-        d = 1
-        while row + d < Field.HEIGHT and self._field[row + d][column] == self._field[row][column]:
-            vertical_line += 1
-            d += 1
-
-        d = 1 
-        while row - d >= 0 and self._field[row - d][column] == self._field[row][column]:
-            vertical_line += 1
-            d += 1
-
-        # Проверка горизонтали
-        horizontal_line = 1
-        d = 1
-        while column - d >= 0 and self._field[row][column - d] == self._field[row][column]:
-            horizontal_line += 1
-            d += 1
-
-        d = 1 
-        while column + d < Field.WIDTH and self._field[row][column + d] == self._field[row][column]:
-            horizontal_line += 1
-            d += 1
-
-     
-        if max(main_diagonal_line, side_diagonal_line, vertical_line, horizontal_line) >= Field.STREAK_TO_WIN:
+        if self.check_win():
             return (GameStates.CROSS_WON if self._next_move == PlayerType.CROSS else GameStates.NAUGHT_WON)
-        
-        
-        # ничья ?
         if self.__free_cells_count == 0:
             return GameStates.TIE
-
         return GameStates.CONTINUE
 
 
