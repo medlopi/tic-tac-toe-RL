@@ -1,4 +1,5 @@
 from app.game_config import Field, PlayerType, Cell
+from app.node import Node
 from enum import Enum
 import sys
 
@@ -18,77 +19,97 @@ DIRECTIONS = [
 ]
 
 
-analyzed_positions: dict[str, tuple[PositionStatus, Cell]] = {}
+analyzed_positions: dict[int, tuple[PositionStatus, Cell]] = {}
 
 
-def check_win(position: str, last_move: Cell) -> bool:
-        """
-        Проверяет, закончилась ли игра победой
-        """
-        if last_move.row == -1 and last_move.col == -1:
-            return False
-        
-        last_move_index = last_move.row * Field.WIDTH + last_move.col
-        for direction in range(4):
-            count = 1
-            for _ in range(2):
-                row = last_move.row + DIRECTIONS[direction][0]
-                col = last_move.col + DIRECTIONS[direction][1]
-                index = row * Field.WIDTH + col
-                while (
-                    0 <= row < Field.HEIGHT and
-                    0 <= col < Field.WIDTH and
-                    position[index] == position[last_move_index]
-                ):
-                    count += 1
-                    row += DIRECTIONS[direction][0]
-                    col += DIRECTIONS[direction][1]
-                    index = row * Field.WIDTH + col
-                direction = (direction + 4) % 8
-            if count >= Field.STREAK_TO_WIN:
-                return True
-            
+def check_win(current_state: Node) -> bool:
+    """
+    Проверяет, закончилась ли игра победой
+    """
+
+    if current_state.last_move.row == -1:
         return False
+    
+    for direction in range(4):
+        count = 1
 
+        for _ in range(2):
+            row = current_state.last_move.row + DIRECTIONS[direction][0]
+            col = current_state.last_move.col + DIRECTIONS[direction][1]
 
-def get_position_status_and_best_move(position: str, current_player: PlayerType, last_move: Cell) -> tuple[PositionStatus, Cell]:
-        """
-        Возращает оценку позиции и оптимальный ход
-        """
-        if position in analyzed_positions:
-            return analyzed_positions[position]
+            while (
+                0 <= row < Field.HEIGHT and
+                0 <= col < Field.WIDTH and
+                current_state.field[row][col] == current_state.field[current_state.last_move.row][current_state.last_move.col]
+            ):
+                count += 1
+                row += DIRECTIONS[direction][0]
+                col += DIRECTIONS[direction][1]
+
+            direction = (direction + 4) % 8
+
+        if count >= Field.STREAK_TO_WIN:
+            return True
         
-        if check_win(position, last_move):
-            analyzed_positions[position] = (PositionStatus.LOSING_POSITION, Cell())
-            return analyzed_positions[position]
-        
-        if not position.count('0'):
-            analyzed_positions[position] = (PositionStatus.DRAW_POSITION, Cell())
-            return analyzed_positions[position]
-        
-        analyzed_positions[position] = (PositionStatus.LOSING_POSITION, Cell())
+    return False
 
-        for row in range(Field.HEIGHT):
-            for col in range(Field.WIDTH):
-                index = row * Field.WIDTH + col
 
-                if position[index] != '0':
-                    continue
+def get_position_status_and_best_move(current_state: Node) -> tuple[PositionStatus, Cell]:
+    """
+    Возращает оценку позиции и оптимальный ход
+    """
 
-                next_position: str = position[:index] + str(current_player.value + 1) + position[index + 1:]
-                next_position_status: PositionStatus = get_position_status_and_best_move(
-                    next_position, 
-                    PlayerType(abs(current_player.value - 1)), 
-                    Cell(row, col)
-                )[0]
+    current_position_hash: int = hash(current_state)
+    if current_position_hash in analyzed_positions:
+        return analyzed_positions[current_position_hash]
+    
+    if check_win(current_state):
+        analyzed_positions[current_position_hash] = (PositionStatus.LOSING_POSITION, Cell())
+        return analyzed_positions[current_position_hash]
+    
+    if not current_state.free_cells_count:
+        analyzed_positions[current_position_hash] = (PositionStatus.DRAW_POSITION, Cell())
+        return analyzed_positions[current_position_hash]
+    
+    analyzed_positions[current_position_hash] = (PositionStatus.LOSING_POSITION, Cell())
+    changed: bool = False
+    current_player: PlayerType = current_state.who_moves
+    current_last_move: Cell = current_state.last_move
 
-                if next_position_status == PositionStatus.LOSING_POSITION:
-                    analyzed_positions[position] = (PositionStatus.WINNING_POSITION, Cell(row, col))
-                    return analyzed_positions[position]
-                elif next_position_status == PositionStatus.DRAW_POSITION:
-                    analyzed_positions[position] = (PositionStatus.DRAW_POSITION, Cell(row, col))
-                else:
-                    if analyzed_positions[position][0] == PositionStatus.LOSING_POSITION:
-                        analyzed_positions[position] = (PositionStatus.LOSING_POSITION, Cell(row, col))
+    current_state.who_moves = PlayerType(abs(current_state.who_moves.value - 1))
+    current_state.free_cells_count -= 1
+    
+    for row in range(Field.HEIGHT):
+        for col in range(Field.WIDTH):
+            if current_state.field[row][col] != PlayerType.NONE:
+                continue
 
-        return analyzed_positions[position]
+            current_state.field[row][col] = current_player
+            current_state.last_move = Cell(row, col)
+
+            next_position_status: PositionStatus = get_position_status_and_best_move(current_state)[0]
+
+            current_state.field[row][col] = PlayerType.NONE
+
+            if next_position_status == PositionStatus.LOSING_POSITION:
+                analyzed_positions[current_position_hash] = (PositionStatus.WINNING_POSITION, Cell(row, col))
+
+                current_state.who_moves = current_player
+                current_state.free_cells_count += 1
+                current_state.last_move = current_last_move
+
+                return analyzed_positions[current_position_hash]
+            elif next_position_status == PositionStatus.DRAW_POSITION:
+                if analyzed_positions[current_position_hash][0] == PositionStatus.LOSING_POSITION:
+                    analyzed_positions[current_position_hash] = (PositionStatus.DRAW_POSITION, Cell(row, col))
+                    changed = True
+            else:
+                if analyzed_positions[current_position_hash][0] == PositionStatus.LOSING_POSITION and not changed:
+                    analyzed_positions[current_position_hash] = (PositionStatus.LOSING_POSITION, Cell(row, col))
+                    changed = True
+
+    current_state.who_moves = current_player
+    current_state.free_cells_count += 1
+    current_state.last_move = current_last_move
+
+    return analyzed_positions[current_position_hash]
