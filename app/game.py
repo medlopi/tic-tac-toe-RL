@@ -1,12 +1,11 @@
 from app.game_config import Field, GameStates, PlayerType, PlayerIcon, Cell
 from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION
-
+from app.node import Node
+from typing import ForwardRef
+import copy
 
 class Game:
-    _who_moves: PlayerType = PlayerType.CROSS
-    _field: list[list[PlayerType]] = [[PlayerType.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)]
-    __free_cells_count: int = (Field.WIDTH * Field.HEIGHT)  # для быстрой проверки ничьей, TODO: сделать её умнее
-    _last_move: Cell = Cell()
+    current_state : ForwardRef('Node') = Node()
 
 
     def __init__(self) -> None:
@@ -22,12 +21,14 @@ class Game:
         while True:  # TODO добавить возмножность завершать программу без помощи Ctrl + C :D
             try:
                 user_input = input(
-                    f"куда хотите походить? вы -- {PlayerIcon[self._who_moves]} (строка и столбец через пробел): "
+                    f"куда хотите походить? вы -- {PlayerIcon[self.current_state.who_moves]} (строка и столбец через пробел): "
                 )
                 
                 row, column = map(int, user_input.split())
                 if 0 <= row < Field.HEIGHT and 0 <= column < Field.WIDTH:
                     self._make_move(row, column)
+                elif (row == -1 and column == -1):
+                    self.test_def_go_back_to_parent()
                 else:
                     print(
                         f"координаты должны быть в диапазоне от (0, 0) до ({Field.HEIGHT - 1}, {Field.WIDTH - 1}). попробуйте снова:"
@@ -47,12 +48,12 @@ class Game:
         for direction in range(4):
             count = 1
             for _ in range(2):
-                row = self._last_move.row + DIRECTIONS[direction][0]
-                col = self._last_move.col + DIRECTIONS[direction][1]
+                row = self.current_state.last_move.row + DIRECTIONS[direction][0]
+                col = self.current_state.last_move.col + DIRECTIONS[direction][1]
                 while (
                     0 <= row < Field.HEIGHT and
                     0 <= col < Field.WIDTH and
-                    self._field[row][col] == self._field[self._last_move.row][self._last_move.col]
+                    self.current_state.field[row][col] == self.current_state.field[self.current_state.last_move.row][self.current_state.last_move.col]
                 ):
                     count += 1
                     row += DIRECTIONS[direction][0]
@@ -62,27 +63,29 @@ class Game:
                 return True
         return False
 
+    
+
 
     def __check_game_state(self) -> GameStates:
         """
         Проверяет состояние игры
         """
         if self.__check_win():
-            return (GameStates.CROSS_WON if self._who_moves == PlayerType.CROSS else GameStates.NAUGHT_WON)
-        if self.__free_cells_count == 0:
+            return (GameStates.CROSS_WON if self.current_state.who_moves == PlayerType.NAUGHT else GameStates.NAUGHT_WON)
+        if self.current_state.free_cells_count == 0:
             return GameStates.TIE
         return GameStates.CONTINUE
 
 
-    # TODO зачем?
-    # def get_possible_actions(self):
-    #     if not self.isTerminal():
-    #         empty_cells = []
-    #         for i in range(Field.HEIGHT):
-    #             for j in range(Field.WIDTH):
-    #                 empty_cells.append((i, j))
-    #         return empty_cells
-    #     return []
+
+    def children(self):
+        if not self.isTerminal():
+            empty_cells = []
+            for i in range(Field.HEIGHT):
+                for j in range(Field.WIDTH):
+                    empty_cells.append((i, j))
+            return empty_cells
+        return []
 
 
     def _print_field(self) -> None:
@@ -90,7 +93,7 @@ class Game:
 
         print("-" * (3 * Field.WIDTH + 1 * (Field.WIDTH + 1)))  # в каждой клетке по 3 символа, еще есть разделители
         # print("-" * (4 * Field.WIDTH - 1))
-        for row in self._field:
+        for row in self.current_state.field:
             print("| ", end="")
             print(" | ".join(PlayerIcon[cell] for cell in row), end=" |\n")
             print("-" * (3 * Field.WIDTH + 1 * (Field.WIDTH + 1)))  # в каждой клетке по 3 символа, еще есть разделители
@@ -100,17 +103,24 @@ class Game:
     def _make_move(self, row: int, column: int) -> None:
         """Обрабатывает ходы"""
 
-        if self._field[row][column] == PlayerType.NONE:
-            self._last_move = Cell(row, column)
-            self._field[row][column] = self._who_moves
-            self.__free_cells_count -= 1
+
+        if self.current_state.field[row][column] == PlayerType.NONE:
+
+            state_after_move = Node()
+            state_after_move.last_move = Cell(row, column)
+            state_after_move.field = copy.deepcopy(self.current_state.field)
+            state_after_move.field[row][column] = self.current_state.who_moves
+            state_after_move.free_cells_count -= 1
+            state_after_move.parent = self.current_state
+            state_after_move.who_moves = PlayerType(abs(self.current_state.who_moves.value - 1))
+
+            self.current_state = state_after_move
 
             self._print_field()
 
             game_status: GameStates = self.__check_game_state()
             if game_status == GameStates.CONTINUE:
-                self._who_moves = PlayerType(abs(self._who_moves.value - 1))
-
+ 
                 self.__get_coordinates()
             elif game_status == GameStates.TIE:
                 print("Tie!")
@@ -144,13 +154,17 @@ class Game:
     #     return 1 if self._who_moves == PlayerType.CROSS else -1
 
 
+    def test_def_go_back_to_parent(self):
+        self.current_state = self.current_state.parent
+        self._print_field()
+
     def _reset_game(self) -> None:
         """reset"""
 
-        self._who_moves = PlayerType.CROSS
-        self._last_move = Cell()
-        self._field = [[PlayerType.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)]
-        self.__free_cells_count = Field.WIDTH * Field.HEIGHT
+        self.current_state.who_moves = PlayerType.CROSS
+        self.current_state.last_move = Cell()
+        self.current_state.field = [[PlayerType.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)]
+        self.current_state.free_cells_count = Field.WIDTH * Field.HEIGHT
 
         self._print_field()
 
