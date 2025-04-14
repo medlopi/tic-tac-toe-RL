@@ -3,7 +3,7 @@ from app.game import Game
 
 def main():
     game: Game = Game()
-    
+
     game.start_processing_input()
 
 

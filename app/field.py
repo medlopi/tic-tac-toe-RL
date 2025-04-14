@@ -1,4 +1,8 @@
-from app.game_config import CONST_FIELD_HEIGHT, CONST_FIELD_WIDTH, CONST_STREAK_TO_WIN_SIZE
+from app.game_config import (
+    CONST_FIELD_HEIGHT,
+    CONST_FIELD_WIDTH,
+    CONST_STREAK_TO_WIN_SIZE,
+)
 
 
 class Field:

@@ -7,8 +7,4 @@ class Player:
         CROSS = 0
         NAUGHT = 1
 
-    Icon: dict = {
-        Type.NONE: " ",
-        Type.CROSS: "X",
-        Type.NAUGHT: "O"
-    }
+    Icon: dict = {Type.NONE: " ", Type.CROSS: "X", Type.NAUGHT: "O"}
