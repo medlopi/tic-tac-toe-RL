@@ -2,6 +2,7 @@ from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION
 from app.field import Field
 from app.player import Player
 from app.node import Node
+from app.solver import check_win
 
 import copy
 from typing import ForwardRef
@@ -205,7 +206,7 @@ Your command is >   """
                 self.current_state.field
             )  # TODO точно ли нужно поле копировать?
             state_after_move.field[row][column] = self.current_state.who_moves
-            state_after_move.free_cells_count -= 1
+            state_after_move.free_cells_count = self.current_state.free_cells_count - 1
             state_after_move.parent = self.current_state
             state_after_move.who_moves = Player.Type(
                 abs(self.current_state.who_moves.value - 1)
@@ -230,7 +231,7 @@ Your command is >   """
         Проверяет состояние игры
         """
 
-        if self.__check_win():
+        if check_win(self.current_state):
             return (
                 Game.GameStates.CROSS_WON
                 if self.current_state.who_moves == Player.Type.NAUGHT
@@ -241,47 +242,6 @@ Your command is >   """
             return Game.GameStates.TIE
 
         return Game.GameStates.CONTINUE
-
-    def __check_win(self) -> bool:
-        """
-        Проверяет, закончилась ли игра победой
-        """
-
-        DIRECTIONS = [
-            (-1, 0),
-            (-1, 1),
-            (0, 1),
-            (1, 1),
-            (1, 0),
-            (1, -1),
-            (0, -1),
-            (-1, -1),
-        ]
-
-        for direction in range(4):
-            count = 1
-
-            for _ in range(2):
-                row = self.current_state.last_move.row + DIRECTIONS[direction][0]
-                col = self.current_state.last_move.col + DIRECTIONS[direction][1]
-
-                while (
-                    0 <= row < Field.HEIGHT
-                    and 0 <= col < Field.WIDTH
-                    and self.current_state.field[row][col]
-                    == self.current_state.field[self.current_state.last_move.row][
-                        self.current_state.last_move.col
-                    ]
-                ):
-                    count += 1
-                    row += DIRECTIONS[direction][0]
-                    col += DIRECTIONS[direction][1]
-
-                direction = (direction + 4) % 8
-            if count >= Field.STREAK_TO_WIN:
-                return True
-
-        return False
 
     def __reset_game(self) -> None:
         """
