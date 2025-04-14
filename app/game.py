@@ -205,7 +205,7 @@ Your command is >   """
                 self.current_state.field
             )  # TODO точно ли нужно поле копировать?
             state_after_move.field[row][column] = self.current_state.who_moves
-            state_after_move.free_cells_count -= 1
+            state_after_move.free_cells_count = self.current_state.free_cells_count - 1
             state_after_move.parent = self.current_state
             state_after_move.who_moves = Player.Type(
                 abs(self.current_state.who_moves.value - 1)
