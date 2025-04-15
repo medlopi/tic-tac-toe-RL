@@ -4,6 +4,7 @@ from app.game_config import (
     CONST_STREAK_TO_WIN_SIZE,
 )
 
+from enum import Enum
 
 class Field:
     HEIGHT = CONST_FIELD_HEIGHT
@@ -14,3 +15,10 @@ class Field:
         def __init__(self, row=-1, col=1):
             self.row = row
             self.col = col
+
+
+class GameStates(Enum):
+        CROSS_WON = 0
+        NAUGHT_WON = 1
+        CONTINUE = 2
+        TIE = 3

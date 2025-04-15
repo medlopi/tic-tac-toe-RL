@@ -14,45 +14,9 @@ class PositionStatus(Enum):
     DRAW_POSITION = 2
 
 
-DIRECTIONS = [
-    (-1, 0), (-1, 1), (0, 1), (1, 1),
-    (1, 0), (1, -1), (0, -1), (-1, -1)
-]
-
 
 analyzed_positions: dict[int, tuple[PositionStatus, Field.Cell]] = {}
 
-
-def check_win(current_state: Node) -> bool:
-    """
-    Проверяет, закончилась ли игра победой
-    """
-
-    if current_state.last_move.row == -1:
-        return False
-    
-    for direction in range(4):
-        count = 1
-
-        for _ in range(2):
-            row = current_state.last_move.row + DIRECTIONS[direction][0]
-            col = current_state.last_move.col + DIRECTIONS[direction][1]
-
-            while (
-                0 <= row < Field.HEIGHT and
-                0 <= col < Field.WIDTH and
-                current_state.field[row][col] == current_state.field[current_state.last_move.row][current_state.last_move.col]
-            ):
-                count += 1
-                row += DIRECTIONS[direction][0]
-                col += DIRECTIONS[direction][1]
-
-            direction = (direction + 4) % 8
-
-        if count >= Field.STREAK_TO_WIN:
-            return True
-        
-    return False
 
 
 def get_position_status_and_best_move(current_state: Node) -> tuple[PositionStatus, Field.Cell]:
@@ -64,7 +28,7 @@ def get_position_status_and_best_move(current_state: Node) -> tuple[PositionStat
     if current_position_hash in analyzed_positions:
         return analyzed_positions[current_position_hash]
     
-    if check_win(current_state):
+    if current_state.check_win():
         analyzed_positions[current_position_hash] = (PositionStatus.LOSING_POSITION, Field.Cell())
         return analyzed_positions[current_position_hash]
     

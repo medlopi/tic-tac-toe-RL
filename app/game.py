@@ -1,8 +1,9 @@
 from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION
-from app.field import Field
+from app.field import Field, GameStates
 from app.player import Player
 from app.node import Node
-from app.solver import check_win
+from app.mcts import MCTS
+from app.solver import get_position_status_and_best_move
 
 import copy
 from typing import ForwardRef
@@ -10,11 +11,6 @@ from enum import Enum
 
 
 class Game:
-    class GameStates(Enum):
-        CROSS_WON = 0
-        NAUGHT_WON = 1
-        CONTINUE = 2
-        TIE = 3
 
     class InputCommandType(Enum):
         EXIT = 0
@@ -22,14 +18,14 @@ class Game:
         ROLL_BACK = 2
         ERROR = 3
 
-    def __init__(self) -> None:
+    def __init__(self, mcts : MCTS) -> None:
         """
         Выводит информацию о игре
         """
 
         print("Welcome to the MxNxK game! :D")
         print(PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION)
-
+        self.mcts = mcts
         self.current_state: ForwardRef("Node") = Node()
 
     def start_processing_input(self):
@@ -45,6 +41,13 @@ class Game:
         while True:
             self.__print_field()
 
+            pos, really_best_cell = get_position_status_and_best_move(self.current_state)
+
+            maybe_best_cell : Field.Cell = self.mcts.choose_best(self.current_state)
+            print(maybe_best_cell.row, maybe_best_cell.col, "May be the greates move")
+            print(really_best_cell.row, really_best_cell.col, "Really the greates move")
+            print()
+
             user_input = input(
                 f"""                               
 Enter <<[row_index] [column_index]>> to make a move to the selected square.
@@ -55,6 +58,10 @@ You are {Player.Icon[self.current_state.who_moves]}.
 Your command is >   """
             )
             print()  # для красоты
+
+           
+            
+            
 
             command_type: Game.InputCommandType = self.__process_input_command(
                 user_input
@@ -137,6 +144,8 @@ Your command is >   """
         def __catch_unexpected_command() -> None:
             print("Unexpected command. Try again please")
 
+
+
         """
         начинаем обработку ввода
         """
@@ -146,7 +155,7 @@ Your command is >   """
             return Game.InputCommandType.EXIT
 
         if user_input == "-1":
-            __go_back_to_parent()
+            __go_back_to_parent(self)
 
             return Game.InputCommandType.ROLL_BACK
 
@@ -184,10 +193,10 @@ Your command is >   """
 
             self.__reset_game()
 
-        def __someone_won(game_status: Game.GameStates) -> None:
+        def __someone_won(game_status: GameStates) -> None:
             self.__print_field()
 
-            winner = "Cross" if game_status == Game.GameStates.CROSS_WON else "Nought"
+            winner = "Cross" if game_status == GameStates.CROSS_WON else "Nought"
             print(f"{winner} won! Restarting the Game . . .", end="\n\n")
 
             self.__reset_game()
@@ -200,25 +209,16 @@ Your command is >   """
             return
 
         if self.current_state.field[row][column] == Player.Type.NONE:
-            state_after_move: Node = Node()
-            state_after_move.last_move = Field.Cell(row, column)
-            state_after_move.field = copy.deepcopy(
-                self.current_state.field
-            )  # TODO точно ли нужно поле копировать?
-            state_after_move.field[row][column] = self.current_state.who_moves
-            state_after_move.free_cells_count = self.current_state.free_cells_count - 1
-            state_after_move.parent = self.current_state
-            state_after_move.who_moves = Player.Type(
-                abs(self.current_state.who_moves.value - 1)
-            )
+
+            state_after_move = self.current_state.create_child(Field.Cell(row, column))
 
             self.current_state = state_after_move
 
-            game_status: Game.GameStates = self.__check_game_state()
-            if game_status == Game.GameStates.CONTINUE:
+            game_status: GameStates = self.current_state.check_game_state()
+            if game_status == GameStates.CONTINUE:
                 __successful_move()
 
-            elif game_status == Game.GameStates.TIE:
+            elif game_status == GameStates.TIE:
                 __tie_happened()
 
             else:
@@ -226,22 +226,6 @@ Your command is >   """
         else:
             __wrong_ceil_chosen()
 
-    def __check_game_state(self) -> GameStates:
-        """
-        Проверяет состояние игры
-        """
-
-        if check_win(self.current_state):
-            return (
-                Game.GameStates.CROSS_WON
-                if self.current_state.who_moves == Player.Type.NAUGHT
-                else Game.GameStates.NAUGHT_WON
-            )
-
-        if self.current_state.free_cells_count == 0:
-            return Game.GameStates.TIE
-
-        return Game.GameStates.CONTINUE
 
     def __reset_game(self) -> None:
         """
@@ -257,27 +241,7 @@ Your command is >   """
 
     # TODO заготовки под MCTS
 
-    # def is_terminal(self):
-    #     return self.__check_game_state() != GameStates.CONTINUE
 
-    # def children(self):
-    #     if not self.isTerminal():
-    #         empty_cells = []
-    #         for i in range(Field.HEIGHT):
-    #             for j in range(Field.WIDTH):
-    #                 empty_cells.append((i, j))
-    #         return empty_cells
-    #     return []
-
-    # def get_reward(self):
-    #     if self.isTerminal():
-    #         if self.__check_game_state() == GameStates.CROSS_WON:
-    #             return 1.0
-    #         elif self.__check_game_state() == GameStates.NAUGHT_WON:
-    #             return 0.0
-    #         else:
-    #             return 0.5
-    #     return None
 
     # def get_current_player(self):
     #     return 1 if self._who_moves == Player.Type.CROSS else -1
