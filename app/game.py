@@ -182,7 +182,7 @@ Your command is >   """
             self.__print_field()
             print("Tie! Restarting the Game . . .", end="\n\n")
 
-            self.__reset_game()
+            # self.__reset_game()
 
         def __someone_won(game_status: Game.GameStates) -> None:
             self.__print_field()
@@ -190,7 +190,7 @@ Your command is >   """
             winner = "Cross" if game_status == Game.GameStates.CROSS_WON else "Nought"
             print(f"{winner} won! Restarting the Game . . .", end="\n\n")
 
-            self.__reset_game()
+            # self.__reset_game()
 
         """
         обработка хода начинается
@@ -225,6 +225,9 @@ Your command is >   """
                 __someone_won(game_status)
         else:
             __wrong_ceil_chosen()
+
+    def get_last_move(self): # Добавил геттер последнего хода
+        return self.current_state.last_move
 
     def __check_game_state(self) -> GameStates:
         """
