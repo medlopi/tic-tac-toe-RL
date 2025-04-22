@@ -24,7 +24,7 @@ COLOR_O_MAIN = (75, 255, 75)
 COLOR_O_OUTLINE = (180, 255, 180)
 COLOR_WIN_LINE = (0, 0, 0)
 
-CELL_SIZE = 80  # Размер ячейки (не изменяется) TODO уменьшать при увеличении поля
+CELL_SIZE = 780 // max(Field.HEIGHT, Field.WIDTH)
 STATUS_HEIGHT = 50
 MESSAGE_HEIGHT = 40
 PADDING = 20
@@ -122,7 +122,7 @@ class PyGameInterface:
 
     def handle_click(self, pos):
         col = (pos[0] - self.field_x) // CELL_SIZE
-        row = (pos[1] - self.field_y) // CELL_SIZE
+        row = (pos[1] - self.field_y - PADDING) // CELL_SIZE
         
         if 0 <= row < Field.HEIGHT and 0 <= col < Field.WIDTH:
             if self.game.current_state.field[row][col] == Player.Type.NONE:
