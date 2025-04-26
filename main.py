@@ -2,6 +2,7 @@ from app.game import Game
 from app.mcts import MCTS
 from app.node import Node
 
+from app.system import measure_performance
 
 
 def main():
@@ -10,8 +11,9 @@ def main():
 
     board = Node()
 
+    @measure_performance
     def train_MCTS(iterations : int):
-        for i in range(iterations):
+        for _ in range(iterations):
             mcts.do_rollout(board)
 
     train_MCTS(2000)
@@ -19,9 +21,6 @@ def main():
     game: Game = Game(mcts)
 
     game.start_processing_input()
-
-
-
 
 
 if __name__ == "__main__":
