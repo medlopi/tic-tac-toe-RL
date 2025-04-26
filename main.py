@@ -13,9 +13,7 @@ def main():
     board = Node()
 
     @measure_performance
-    def train_MCTS(iterations : int):
-        print("training started . . .")
-        
+    def train_MCTS(iterations : int):     
         for _ in range(iterations):
             mcts.do_rollout(board)
 

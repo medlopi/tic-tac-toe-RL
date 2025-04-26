@@ -41,21 +41,27 @@ class MCTS:
         reward = self._simulate(leaf)
         self._backpropagate(path, reward)
 
+
     def _select_path(self, node):
         path = []
+
         while True:
             path.append(node)
+
             if node not in self.children_of_expanded_nodes or not self.children_of_expanded_nodes[node]:
                 # node is not expanded yet or node is terminal
                 return path
 
             not_expanded_children = self.children_of_expanded_nodes[node] - self.children_of_expanded_nodes.keys()
+
             if not_expanded_children:
                 child = not_expanded_children.pop()
                 path.append(child)
+
                 return path
-            node = self._uct_select(node)
             
+            node = self._uct_select(node)
+
 
     def _expand(self, node):
         "Update the `children` dict with the children of `node`"
@@ -63,15 +69,18 @@ class MCTS:
             return #already expanded 
         self.children_of_expanded_nodes[node] = node.get_children()
 
-    def _simulate(self, node):
+
+    def _simulate(self, node):  # TODO что-нибудь поинтереснее не хотите?
         "Returns the reward for a random simulation (to completion) of `node`"
         invert_reward = True
-        while True:
-            if node.is_terminal():
-                reward = node.get_reward()
-                return 1 - reward if invert_reward else reward
+
+        while not node.is_terminal():
             node = node.get_random_child()
             invert_reward = not invert_reward
+        
+        reward = node.get_reward()
+        return 1 - reward if invert_reward else reward
+
 
     def _backpropagate(self, path, reward):
         "Send the reward back up to the ancestors of the leaf"
@@ -79,8 +88,6 @@ class MCTS:
             self.games_number[node] += 1
             self.wins_number[node] += reward
             reward = 1 - reward  # 1 for me is 0 for my enemy, and vice versa
-
-
 
     
     def _uct_select(self, node):
@@ -96,3 +103,4 @@ class MCTS:
             )
 
         return max(self.children_of_expanded_nodes[node], key=uct)
+    

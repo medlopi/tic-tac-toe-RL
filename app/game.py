@@ -1,9 +1,10 @@
-from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION, MAX_FIELD_SIZE_FOR_SOLVER
+from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION, IS_SOLVER_ENABLED, MAX_FIELD_SIZE_FOR_SOLVER
 from app.field import Field, GameStates
 from app.player import Player
 from app.node import Node
 from app.mcts import MCTS
 from app.solver import get_position_status_and_best_move
+from app.system import measure_performance
 
 from typing import ForwardRef
 from enum import Enum
@@ -17,6 +18,7 @@ class Game:
         ROLL_BACK = 2
         ERROR = 3
 
+
     def __init__(self, mcts : MCTS) -> None:
         """
         Выводит информацию о игре
@@ -27,30 +29,42 @@ class Game:
         self.mcts = mcts
         self.current_state: ForwardRef("Node") = Node()
 
+        self.__pretrain_solver()
+
+
+    def _is_solver_enabled(self):
+        return IS_SOLVER_ENABLED and (max(Field.HEIGHT, Field.WIDTH) <= MAX_FIELD_SIZE_FOR_SOLVER)
+
+    @measure_performance
+    def __pretrain_solver(self):
+        if self._is_solver_enabled():
+            get_position_status_and_best_move(self.current_state)
+
 
     def start_processing_input(self):
         """
         Принимает команды игрока
         """
-
         def __print_prediction_with_solver():
-            pos, really_best_cell = get_position_status_and_best_move(self.current_state)
-            print("Solver says that", really_best_cell.row, really_best_cell.col, "is a greate move")
+            if (self._is_solver_enabled()):
+                pos, really_best_cell = get_position_status_and_best_move(self.current_state)
+                print("Solver says that", really_best_cell.row, really_best_cell.col, "is a great move")
 
         def __print_prediction_no_solver():
             maybe_best_cell : Field.Cell = self.mcts.choose_best(self.current_state)
-            print("MCTS says that", maybe_best_cell.row, maybe_best_cell.col, "may be a greate move")
+            print("MCTS says that", maybe_best_cell.row, maybe_best_cell.col, "may be a great move")
 
         if (
             min(Field.HEIGHT, Field.WIDTH) < 1
-        ):  # косяк. #TODO надо бы пользователя уведомить, В ЧЕМ ИМЕННО он не прав по жизни...
+        ):  
+            print("ur settings is bad!")
+
             return
 
         while True:
             self.__print_field()
 
-            if max(Field.HEIGHT, Field.WIDTH) <= MAX_FIELD_SIZE_FOR_SOLVER:
-                __print_prediction_with_solver()
+            __print_prediction_with_solver()
             __print_prediction_no_solver()
             print()
 

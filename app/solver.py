@@ -4,8 +4,6 @@ from app.node import Node
 from enum import Enum
 import sys
 
-# from app.system import measure_performance  #TODO тестовый мусор
-
 
 sys.setrecursionlimit(10**5)
 
@@ -20,7 +18,6 @@ class PositionStatus(Enum):
 analyzed_positions: dict[int, tuple[PositionStatus, Field.Cell]] = {}
 
 
-# @measure_performance
 def get_position_status_and_best_move(current_state: Node) -> tuple[PositionStatus, Field.Cell]:
     """
     Возращает оценку позиции и оптимальный ход
