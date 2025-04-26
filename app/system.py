@@ -40,11 +40,13 @@ def measure_performance(func):
         
         end_time = time.time()
         
-        elapsed_time = end_time - start_time
+        elapsed_time = (end_time - start_time) / 60  # в минутах
         peak_memory_used = peak_memory / (1024 ** 2)  # в мб
         
-        print(f"[{func.__name__}] Time: {elapsed_time:.2f} seconds")
+        print()
+        print(f"[{func.__name__}] Time: {elapsed_time:.2f} minutes")
         print(f"[{func.__name__}] Peak memory used: {peak_memory_used:.3f} MB")
+        print()
         
         return result
     

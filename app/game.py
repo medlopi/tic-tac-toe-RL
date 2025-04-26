@@ -1,4 +1,4 @@
-from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION
+from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION, MAX_FIELD_SIZE_FOR_SOLVER
 from app.field import Field, GameStates
 from app.player import Player
 from app.node import Node
@@ -27,10 +27,19 @@ class Game:
         self.mcts = mcts
         self.current_state: ForwardRef("Node") = Node()
 
+
     def start_processing_input(self):
         """
         Принимает команды игрока
         """
+
+        def __print_prediction_with_solver():
+            pos, really_best_cell = get_position_status_and_best_move(self.current_state)
+            print("Solver says that", really_best_cell.row, really_best_cell.col, "is a greate move")
+
+        def __print_prediction_no_solver():
+            maybe_best_cell : Field.Cell = self.mcts.choose_best(self.current_state)
+            print("MCTS says that", maybe_best_cell.row, maybe_best_cell.col, "may be a greate move")
 
         if (
             min(Field.HEIGHT, Field.WIDTH) < 1
@@ -40,11 +49,9 @@ class Game:
         while True:
             self.__print_field()
 
-            pos, really_best_cell = get_position_status_and_best_move(self.current_state)
-
-            maybe_best_cell : Field.Cell = self.mcts.choose_best(self.current_state)
-            print(maybe_best_cell.row, maybe_best_cell.col, "May be the greates move")
-            print(really_best_cell.row, really_best_cell.col, "Really the greates move")
+            if max(Field.HEIGHT, Field.WIDTH) <= MAX_FIELD_SIZE_FOR_SOLVER:
+                __print_prediction_with_solver()
+            __print_prediction_no_solver()
             print()
 
             user_input = input(
