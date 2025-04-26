@@ -1,9 +1,9 @@
 import math
 from app.field import Field
 from collections import defaultdict
+
+
 class MCTS:
-
-
     def __init__(self):
         self.wins_number = defaultdict(int) 
         self.games_number = defaultdict(int) 

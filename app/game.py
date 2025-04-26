@@ -5,7 +5,6 @@ from app.node import Node
 from app.mcts import MCTS
 from app.solver import get_position_status_and_best_move
 
-import copy
 from typing import ForwardRef
 from enum import Enum
 
@@ -238,10 +237,3 @@ Your command is >   """
             [Player.Type.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
         ]
         self.current_state.free_cells_count = Field.WIDTH * Field.HEIGHT
-
-    # TODO заготовки под MCTS
-
-
-
-    # def get_current_player(self):
-    #     return 1 if self._who_moves == Player.Type.CROSS else -1
