@@ -3,20 +3,74 @@ from app.player import Player
 from typing import ForwardRef
 import copy
 import random
+import numpy as np
 
 DIRECTIONS = [
     (-1, 0), (-1, 1), (0, 1), (1, 1),
     (1, 0), (1, -1), (0, -1), (-1, -1)
 ]
 
+
 class Node:
-    parent: ForwardRef("Node") = None
-    who_moves: Player.Type = Player.Type.CROSS
-    field: list[list[Player.Type]] = [
-        [Player.Type.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
-    ] 
-    free_cells_count: int = Field.WIDTH * Field.HEIGHT
-    last_move: Field.Cell = Field.Cell()
+
+    def __init__(self, parent=None, move=None, prior_probability=1.0):
+        self._parent: ForwardRef("Node") = parent
+        self._children: dict[Field.Cell, Node] = {}
+        self._visits_number: int = 0
+        self._estimate_value: float = 0
+        self._exploration_bonus: float = 0
+        self._prior_probability: float = prior_probability
+
+        if parent is None:
+            self.who_moves: Player.Type = Player.Type.CROSS
+            self.field: list[list[Player.Type]] = [
+                [Player.Type.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
+            ] 
+            self.free_cells_count: int = Field.WIDTH * Field.HEIGHT
+            self.last_move: Field.Cell = Field.Cell()
+        else:
+            self.field = copy.deepcopy(parent.field)
+            self.field[move.row][move.col] = parent.who_moves
+            self.who_moves = Player.Type(abs(parent.who_moves.value - 1))
+            self.free_cells_count = parent.free_cells_count - 1
+            self.last_move = move
+
+    def get_node_value(self, puct_constant: float) -> float:
+        self._exploration_bonus = (puct_constant * self._prior_probability *
+            np.sqrt(self._parent._visits_number) / (1 + self._visits_number))
+        return self._estimate_value + self._exploration_bonus
+    
+    def select_action(self, puct_constant) -> tuple[Field.Cell, ForwardRef("Node")]:
+        return max(self._children.items(),
+                   key=lambda child: child[1].get_node_value(puct_constant))
+    
+    def update_node(self, leaf_value: float) -> None:
+        self._visits_number += 1
+        self._estimate_value += (leaf_value - self._estimate_value) / self._visits_number
+
+    def update_all_ancestors_recursively(self, leaf_value: float) -> None:
+        if self._parent:
+            self._parent.update_all_ancestors_recursively(-leaf_value)
+        self.update_node(leaf_value)
+
+    def expand_node(self, actions_with_prior_probabilities: list[tuple[Field.Cell, float]]) -> None:
+        for action, probability in actions_with_prior_probabilities:
+            if action not in self._children:
+                self._children[action] = Node(self, action, probability)
+
+    def is_leaf(self) -> bool:
+        return self._children == {}
+
+    def is_root(self) -> bool:
+        return self._parent is None
+    
+    def get_available_moves(self) -> list[Field.Cell]:
+        result = []
+        for i in range(Field.HEIGHT):
+            for j in range(Field.WIDTH):
+                if self.field[i][j] == Player.Type.NONE:
+                    result.append(Field.Cell(i, j))
+        return result
 
     def check_win(self) -> bool:
         """
@@ -49,53 +103,6 @@ class Node:
             
         return False
 
-
-    def create_child(self, cell : Field.Cell):
-        row, column = cell.row, cell.col
-        child: Node = Node()
-        child.last_move = cell
-        child.field = copy.deepcopy(
-            self.field
-        )  
-        child.field[row][column] = self.who_moves
-        child.free_cells_count = self.free_cells_count - 1
-        child.parent = self
-        child.who_moves = Player.Type(
-            abs(self.who_moves.value - 1)
-        )
-
-
-        return child
-
-
-    def get_children(self):
-        empty_cells = []
-        if not self.is_terminal():
-            
-            for row in range(Field.HEIGHT):
-                for column in range(Field.WIDTH):
-                    
-                    if self.field[row][column] == Player.Type.NONE:
-                        
-                        empty_cells.append(self.create_child(Field.Cell(row, column)))
-
-        
-
-        return empty_cells
-
-    def get_random_child(self):
-        empty_cells = []
-        if not self.is_terminal():
-            
-            for row in range(Field.HEIGHT):
-                for column in range(Field.WIDTH):
-                    
-                    if self.field[row][column] == Player.Type.NONE:
-                        empty_cells.append(Field.Cell(row, column))
-
-        return self.create_child(random.choice(empty_cells))
-    
-
     def check_game_state(self) -> GameStates:
         """
         Проверяет состояние игры
@@ -115,19 +122,6 @@ class Node:
 
     def is_terminal(self):
         return self.check_game_state() != GameStates.CONTINUE
-
-
-
-    def get_reward(self):
-        if self.is_terminal():
-            if self.check_game_state() == GameStates.CROSS_WON:
-                return 1.0
-            elif self.check_game_state() == GameStates.NAUGHT_WON:
-                return 0.0
-            else:
-                return 0.5
-        return None
-
 
     def __hash__(self):
         """

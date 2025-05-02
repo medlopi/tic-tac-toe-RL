@@ -216,7 +216,10 @@ Your command is >   """
 
         if self.current_state.field[row][column] == Player.Type.NONE:
 
-            state_after_move = self.current_state.create_child(Field.Cell(row, column))
+            state_after_move = Node(
+                parent=self.current_state,
+                move=Field.Cell(row, column)
+            )
 
             self.current_state = state_after_move
 
@@ -237,10 +240,4 @@ Your command is >   """
         """
         Сбрасывает игровое поле
         """
-
-        self.current_state.who_moves = Player.Type.CROSS
-        self.current_state.last_move = Field.Cell()
-        self.current_state.field = [
-            [Player.Type.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
-        ]
-        self.current_state.free_cells_count = Field.WIDTH * Field.HEIGHT
+        self.current_state = Node()
