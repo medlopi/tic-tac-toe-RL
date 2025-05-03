@@ -16,6 +16,12 @@ class Field:
             self.row = row
             self.col = col
 
+        def __eq__(self, other):
+            return (self.row, self.col) == (other.row, other.col)
+        
+        def __hash__(self):
+            return hash((self.row, self.col))
+
 
 class GameStates(Enum):
         CROSS_WON = 0

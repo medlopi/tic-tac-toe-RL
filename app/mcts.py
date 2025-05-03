@@ -1,98 +1,89 @@
-import math
-from app.field import Field
-from collections import defaultdict
+from app.field import Field, GameStates
+from app.node import Node
+from app.player import Player
+import numpy as np
+
+
+def rollout_policy_function(node: Node) -> list[tuple[Field.Cell, float]]:
+    available_moves = node.get_available_moves()
+    move_probabilities = np.random.rand(len(available_moves))  # random rollout
+    return zip(available_moves, move_probabilities)
+
+
+def policy_value_function(node: Node) -> list[tuple[Field.Cell, float]]:
+    available_moves = node.get_available_moves()
+    action_probs = np.ones(len(available_moves)) / len(available_moves)
+    return zip(available_moves, action_probs)
 
 
 class MCTS:
-    def __init__(self):
-        self.wins_number = defaultdict(int) 
-        self.games_number = defaultdict(int) 
-        self.children_of_expanded_nodes = dict()
-        self.exploration_weight = 1 / math.sqrt(2)
 
+    def __init__(self, policy_value_function, puct_constant, playout_number):
+        self._root: Node = Node()
+        self._policy_value_function = policy_value_function
+        self._puct_constant: float = puct_constant
+        self._playout_number: int = playout_number
 
-    def choose_best(self, node) -> Field.Cell :
-        if node.is_terminal():
-            print("Ты че дурной?!")
-            return Field.Cell(-1, -1)
-
-        if node not in self.children_of_expanded_nodes.keys():
-            random_state = node.get_random_child()   # there is no expanded children
-            print("дал рандом")
-            return random_state.last_move 
-
-        def score(n):
-            if self.games_number[n] == 0:
-                return float("-inf")  # avoid unseen moves
-            return self.wins_number[n] / self.games_number[n]  # average reward
-
-        best_state = max(self.children_of_expanded_nodes[node], key=score)
-
-        return best_state.last_move
-        
-
-    def do_rollout(self, node):
-        """
-        make one iteration of train -- one game from start to terminal state
-        """
-        path = self._select_path(node)
-        leaf = path[-1]
-        self._expand(leaf)
-        reward = self._simulate(leaf)
-        self._backpropagate(path, reward)
-
-    def _select_path(self, node):
-        path = []
+    def _run_playout(self) -> None:
+        node = self._root
         while True:
-            path.append(node)
-            if node not in self.children_of_expanded_nodes or not self.children_of_expanded_nodes[node]:
-                # node is not expanded yet or node is terminal
-                return path
+            if node.is_leaf():
+                break
+            action, node = node.select_action(self._puct_constant)
 
-            not_expanded_children = self.children_of_expanded_nodes[node] - self.children_of_expanded_nodes.keys()
-            if not_expanded_children:
-                child = not_expanded_children.pop()
-                path.append(child)
-                return path
-            node = self._uct_select(node)
+        game_state = node.check_game_state()
+        if game_state == GameStates.CONTINUE:
+            node.expand_node(self._policy_value_function(node))
+        leaf_value = self._run_rollout(node)
+        node.update_all_ancestors_recursively(-leaf_value)
+
+    def _run_rollout(self, node: Node) -> int:
+        player = node.who_moves
+        winner = Player.Type.NONE
+        while True:
+            game_state = node.check_game_state()
+            if game_state != GameStates.CONTINUE:
+                if game_state == GameStates.CROSS_WON:
+                    winner = Player.Type.CROSS
+                elif game_state == GameStates.NAUGHT_WON:
+                    winner = Player.Type.NAUGHT
+                break
+             
+            action = max(
+                rollout_policy_function(node),
+                key=lambda action: action[1]
+            )[0]
+            node = Node(node, action)
             
+        if winner == Player.Type.NONE:  # tie
+            return 0
+        else:
+            return 1 if winner == player else -1
 
-    def _expand(self, node):
-        "Update the `children` dict with the children of `node`"
-        if node in self.children_of_expanded_nodes:
-            return #already expanded 
-        self.children_of_expanded_nodes[node] = node.get_children()
+    def get_move(self) -> Field.Cell:
+        for _ in range(self._playout_number):
+            self._run_playout()
+        return max(self._root._children.items(),
+                   key=lambda child: child[1]._visits_number)[0]
 
-    def _simulate(self, node):
-        "Returns the reward for a random simulation (to completion) of `node`"
-        invert_reward = True
-        while True:
-            if node.is_terminal():
-                reward = node.get_reward()
-                return 1 - reward if invert_reward else reward
-            node = node.get_random_child()
-            invert_reward = not invert_reward
-
-    def _backpropagate(self, path, reward):
-        "Send the reward back up to the ancestors of the leaf"
-        for node in reversed(path):
-            self.games_number[node] += 1
-            self.wins_number[node] += reward
-            reward = 1 - reward  # 1 for me is 0 for my enemy, and vice versa
+    def move_and_update(self, move: Field.Cell) -> None:
+        if move in self._root._children:
+            self._root = self._root._children[move]
+        else:
+            self._root = Node(self._root, move)
+        self._root._parent = None
 
 
+class MCTSPlayer:
 
+    def __init__(self, puct_constant: float, playout_number: int):
+        self.mcts = MCTS(policy_value_function, puct_constant, playout_number)
+
+    def reset_player(self) -> None:
+        self.mcts = MCTS(policy_value_function, self.mcts._puct_constant, self.mcts._playout_number)
+
+    def get_move(self) -> Field.Cell:
+        return self.mcts.get_move()
     
-    def _uct_select(self, node):
-        """
-        "Select a child of node, balancing exploration & exploitation"
-        """
-        log_N_vertex = math.log(self.games_number[node])
-
-        def uct(n):
-            "Upper confidence bound for trees"
-            return self.wins_number[n] / self.games_number[n] + self.exploration_weight * math.sqrt(
-                log_N_vertex / self.games_number[n]
-            )
-
-        return max(self.children_of_expanded_nodes[node], key=uct)
+    def move_and_update(self, move: Field.Cell) -> None:
+        self.mcts.move_and_update(move)

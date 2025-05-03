@@ -2,7 +2,7 @@ from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION, MAX_FI
 from app.field import Field, GameStates
 from app.player import Player
 from app.node import Node
-from app.mcts import MCTS
+from app.mcts import MCTSPlayer
 from app.solver import get_position_status_and_best_move
 
 from typing import ForwardRef
@@ -17,14 +17,14 @@ class Game:
         ROLL_BACK = 2
         ERROR = 3
 
-    def __init__(self, mcts : MCTS) -> None:
+    def __init__(self, mcts_player: MCTSPlayer) -> None:
         """
         Выводит информацию о игре
         """
 
         print("Welcome to the MxNxK game! :D")
         print(PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION)
-        self.mcts = mcts
+        self.mcts_player: MCTSPlayer = mcts_player
         self.current_state: ForwardRef("Node") = Node()
 
 
@@ -38,7 +38,7 @@ class Game:
             print("Solver says that", really_best_cell.row, really_best_cell.col, "is a greate move")
 
         def __print_prediction_no_solver():
-            maybe_best_cell : Field.Cell = self.mcts.choose_best(self.current_state)
+            maybe_best_cell : Field.Cell = self.mcts_player.get_move()
             print("MCTS says that", maybe_best_cell.row, maybe_best_cell.col, "may be a greate move")
 
         if (
@@ -51,7 +51,8 @@ class Game:
 
             if max(Field.HEIGHT, Field.WIDTH) <= MAX_FIELD_SIZE_FOR_SOLVER:
                 __print_prediction_with_solver()
-            __print_prediction_no_solver()
+            if self.current_state.who_moves == Player.Type.CROSS:
+                __print_prediction_no_solver()
             print()
 
             user_input = input(
@@ -167,6 +168,7 @@ Your command is >   """
 
         if self.__is_correct_coordinates(user_input):
             row, column = map(int, user_input.split())
+            self.mcts_player.move_and_update(Field.Cell(row, column))
             self.__make_move(row, column)
 
             return Game.InputCommandType.MAKE_MOVE
@@ -241,3 +243,4 @@ Your command is >   """
         Сбрасывает игровое поле
         """
         self.current_state = Node()
+        self.mcts_player.reset_player()
