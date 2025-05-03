@@ -1,17 +1,10 @@
-# TODO добавить стартовое меню перед началом игры (с вводом параметров MxNxK + с переключением на игру с ИИ)
-# TODO добавить нормальное центрирование поля
-# TODO добавить уменьшение клеток при увеличении размера поля (поле может не влезть в экран)
-# TODO такое ощущение, что зачёркивание победной линии чертой не всегда выглядит красиво. Можно попробовать сделать овал вокруг победной линии
-
 import pygame
 from pygame.locals import *
 from app.game import Game
 from app.field import Field
 from app.player import Player
 
-pygame.init()
-
-# Цветовая гамма TODO поменять, если людям такая не нравится
+# Цветовая гамма
 COLOR_BG = (140, 140, 140)
 COLOR_FIELD_BG = (180, 180, 180)
 COLOR_STATUS = (53, 0, 211)
@@ -24,11 +17,10 @@ COLOR_O_MAIN = (75, 255, 75)
 COLOR_O_OUTLINE = (180, 255, 180)
 COLOR_WIN_LINE = (0, 0, 0)
 
-CELL_SIZE = 780 // max(Field.HEIGHT, Field.WIDTH)
 STATUS_HEIGHT = 50
 MESSAGE_HEIGHT = 40
 PADDING = 20
-MIN_WIDTH = 400  # Минимальная ширина окна
+MIN_WIDTH = 400
 
 class PyGameInterface:
     def __init__(self, game=None):
@@ -40,46 +32,35 @@ class PyGameInterface:
         self.game_over_start_time = 0
         self.game_over_duration = 3000
         self.game_msg = "Game in progress"
-        
-        # Рассчитываем размеры окна по умолчанию
-        self.default_width = max(Field.WIDTH * CELL_SIZE + PADDING * 2, MIN_WIDTH)
-        self.default_height = Field.HEIGHT * CELL_SIZE + STATUS_HEIGHT + MESSAGE_HEIGHT + PADDING * 2
-        
+        self.cell_size = self.calculate_cell_size()
         self.init_window()
         self.update_game_state()
 
+    def calculate_cell_size(self):
+        return 780 // max(Field.HEIGHT, Field.WIDTH)
+
     def init_window(self):
-        self.screen = pygame.display.set_mode(
-            (self.default_width, self.default_height), 
-            pygame.RESIZABLE
-        )
+        self.default_width = max(Field.WIDTH * self.cell_size + PADDING*2, MIN_WIDTH)
+        self.default_height = Field.HEIGHT * self.cell_size + STATUS_HEIGHT + MESSAGE_HEIGHT + PADDING*2
+        self.screen = pygame.display.set_mode((self.default_width, self.default_height), pygame.RESIZABLE)
         pygame.display.set_caption("MxNxK Game")
         self.handle_resize()
 
     def handle_resize(self):
-        """
-        Пересчет позиций при изменении размера окна
-        """
         screen_width, screen_height = self.screen.get_size()
-        
-        # Расчет позиции игрового поля
-        self.field_width = Field.WIDTH * CELL_SIZE
-        self.field_height = Field.HEIGHT * CELL_SIZE
+        self.cell_size = self.calculate_cell_size()
+        self.field_width = Field.WIDTH * self.cell_size
+        self.field_height = Field.HEIGHT * self.cell_size
         self.field_x = (screen_width - self.field_width) // 2
         self.field_y = STATUS_HEIGHT + MESSAGE_HEIGHT + PADDING
         
-        # Проверяем, чтобы поле не выходило за границы экрана
         if self.field_x < PADDING:
             self.field_x = PADDING
-            self.field_width = screen_width - PADDING * 2
+            self.field_width = screen_width - PADDING*2
             
-        # Обновляем высоту, если нужно
         required_height = self.field_y + self.field_height + PADDING
         if not self.fullscreen and screen_height < required_height:
-            self.screen = pygame.display.set_mode(
-                (screen_width, required_height), 
-                pygame.RESIZABLE
-            )
+            self.screen = pygame.display.set_mode((screen_width, required_height), pygame.RESIZABLE)
 
     def run(self):
         clock = pygame.time.Clock()
@@ -87,13 +68,14 @@ class PyGameInterface:
             current_time = pygame.time.get_ticks()
             if self.game_over and (current_time - self.game_over_start_time) > self.game_over_duration:
                 self.reset_game()
+            
             for event in pygame.event.get():
                 self.handle_event(event)
             
             self.draw()
             pygame.display.flip()
             clock.tick(30)
-
+        
         pygame.quit()
 
     def handle_event(self, event):
@@ -121,9 +103,8 @@ class PyGameInterface:
         self.handle_resize()
 
     def handle_click(self, pos):
-        col = (pos[0] - self.field_x) // CELL_SIZE
-        row = (pos[1] - self.field_y - PADDING) // CELL_SIZE
-        
+        col = (pos[0] - self.field_x) // self.cell_size
+        row = (pos[1] - self.field_y - PADDING) // self.cell_size
         if 0 <= row < Field.HEIGHT and 0 <= col < Field.WIDTH:
             if self.game.current_state.field[row][col] == Player.Type.NONE:
                 self.game._Game__make_move(row, col)
@@ -132,7 +113,6 @@ class PyGameInterface:
 
     def update_game_state(self):
         state = self.game._Game__check_game_state()
-        
         current_player = self.game.current_state.who_moves
         self.status_msg = f"Current: {Player.Icon[current_player]}"
         
@@ -183,6 +163,7 @@ class PyGameInterface:
         text_rect = text.get_rect(center=(screen_width//2, STATUS_HEIGHT + MESSAGE_HEIGHT//2))
         self.screen.blit(text, text_rect)
 
+
     def draw_game_field(self):
         pygame.draw.rect(self.screen, COLOR_FIELD_BG, (
             self.field_x - 10,
@@ -193,39 +174,39 @@ class PyGameInterface:
 
         for row in range(Field.HEIGHT):
             for col in range(Field.WIDTH):
-                x = self.field_x + col * CELL_SIZE
-                y = self.field_y + row * CELL_SIZE + PADDING
+                x = self.field_x + col * self.cell_size
+                y = self.field_y + row * self.cell_size + PADDING
                 self.draw_cell(x, y, row, col)
 
        
 
     def draw_cell(self, x, y, row, col):
         # Рисуем границы между клетками
-        pygame.draw.rect(self.screen, COLOR_GRID, (x, y, CELL_SIZE, CELL_SIZE), 3)
+        pygame.draw.rect(self.screen, COLOR_GRID, (x, y, self.cell_size, self.cell_size), 3)
         
         # Красивые Х и О
         cell = self.game.current_state.field[row][col]
         if cell == Player.Type.CROSS:
             # Окантовка крестика
             pygame.draw.line(self.screen, COLOR_X_OUTLINE,
-                            (x + 10, y + 10), (x + CELL_SIZE - 10, y + CELL_SIZE - 10), 8)
+                            (x + 10, y + 10), (x + self.cell_size - 10, y + self.cell_size - 10), 8)
             pygame.draw.line(self.screen, COLOR_X_OUTLINE,
-                            (x + CELL_SIZE - 10, y + 10), (x + 10, y + CELL_SIZE - 10), 8)
+                            (x + self.cell_size - 10, y + 10), (x + 10, y + self.cell_size - 10), 8)
             # Собственно крестик
             pygame.draw.line(self.screen, COLOR_X_MAIN,
-                            (x + 15, y + 15), (x + CELL_SIZE - 15, y + CELL_SIZE - 15), 6)
+                            (x + 15, y + 15), (x + self.cell_size - 15, y + self.cell_size - 15), 6)
             pygame.draw.line(self.screen, COLOR_X_MAIN,
-                            (x + CELL_SIZE - 15, y + 15), (x + 15, y + CELL_SIZE - 15), 6)
+                            (x + self.cell_size - 15, y + 15), (x + 15, y + self.cell_size - 15), 6)
         
         elif cell == Player.Type.NAUGHT:
             # Окантовка нолика
             pygame.draw.circle(self.screen, COLOR_O_OUTLINE,
-                            (x + CELL_SIZE//2, y + CELL_SIZE//2),
-                            CELL_SIZE//2 - 10, 8)
+                            (x + self.cell_size//2, y + self.cell_size//2),
+                            self.cell_size//2 - 10, 8)
             # Собственно нолик
             pygame.draw.circle(self.screen, COLOR_O_MAIN,
-                            (x + CELL_SIZE//2, y + CELL_SIZE//2),
-                            CELL_SIZE//2 - 13, 6)
+                            (x + self.cell_size//2, y + self.cell_size//2),
+                            self.cell_size//2 - 13, 6)
 
     def draw_win_line(self):
         if self.win_line:
@@ -234,26 +215,26 @@ class PyGameInterface:
             start_row, start_col, end_row, end_col = self.win_line
             
             # Координаты 
-            x1 = self.field_x + start_col * CELL_SIZE + CELL_SIZE//2
-            y1 = self.field_y + start_row * CELL_SIZE + CELL_SIZE//2 + PADDING
-            x2 = self.field_x + end_col * CELL_SIZE + CELL_SIZE//2
-            y2 = self.field_y + end_row * CELL_SIZE + CELL_SIZE//2 + PADDING
+            x1 = self.field_x + start_col * self.cell_size + self.cell_size//2
+            y1 = self.field_y + start_row * self.cell_size + self.cell_size//2 + PADDING
+            x2 = self.field_x + end_col * self.cell_size + self.cell_size//2
+            y2 = self.field_y + end_row * self.cell_size + self.cell_size//2 + PADDING
             
             # Для диагональных линий корректируем координаты, чтобы линия проходила точно через центры
             if abs(start_row - end_row) == abs(start_col - end_col):
                 if start_col < end_col:
-                    x1 -= CELL_SIZE//4
-                    x2 += CELL_SIZE//4
+                    x1 -= self.cell_size//4
+                    x2 += self.cell_size//4
                 else:
-                    x1 += CELL_SIZE//4
-                    x2 -= CELL_SIZE//4
+                    x1 += self.cell_size//4
+                    x2 -= self.cell_size//4
                     
                 if start_row < end_row:
-                    y1 -= CELL_SIZE//4
-                    y2 += CELL_SIZE//4
+                    y1 -= self.cell_size//4
+                    y2 += self.cell_size//4
                 else:
-                    y1 += CELL_SIZE//4
-                    y2 -= CELL_SIZE//4
+                    y1 += self.cell_size//4
+                    y2 -= self.cell_size//4
             
             current_x = x1 + (x2 - x1) * progress
             current_y = y1 + (y2 - y1) * progress
@@ -331,6 +312,16 @@ class PyGameInterface:
         
         return None
 
+
+
 if __name__ == "__main__":
-    interface = PyGameInterface()
-    interface.run()
+    pygame.init()
+    menu = StartMenu()
+    m, n, k, ai_enabled = menu.run()
+    
+    if m > 0 and n > 0 and k > 0:
+        Field.set_dimensions(m, n, k)
+        game = Game()
+        
+        interface = PyGameInterface(game)
+        interface.run()

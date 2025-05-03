@@ -31,6 +31,15 @@ class Game:
         print(PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION)
 
         self.current_state: ForwardRef("Node") = Node()
+        self.__reset_game()
+    
+    def __reset_game(self):
+        self.current_state.field = [
+            [Player.Type.NONE for _ in range(Field.WIDTH)] 
+            for _ in range(Field.HEIGHT)
+        ]
+        self.current_state.free_cells_count = Field.WIDTH * Field.HEIGHT
+        self.current_state.who_moves = Player.Type.CROSS
 
     def start_processing_input(self):
         """
