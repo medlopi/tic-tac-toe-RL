@@ -4,6 +4,7 @@ from app.player import Player
 from app.node import Node
 from app.mcts import MCTSPlayer
 from app.solver import get_position_status_and_best_move
+import numpy as np
 
 from typing import ForwardRef
 from enum import Enum
@@ -169,7 +170,7 @@ Your command is >   """
         if self.__is_correct_coordinates(user_input):
             row, column = map(int, user_input.split())
             self.mcts_player.move_and_update(Field.Cell(row, column))
-            self.__make_move(row, column)
+            self.__make_move(Field.Cell(row, column))
 
             return Game.InputCommandType.MAKE_MOVE
 
@@ -178,7 +179,7 @@ Your command is >   """
 
             return Game.InputCommandType.ERROR
 
-    def __make_move(self, row: int, column: int) -> None:
+    def __make_move(self, cell : Field.Cell) -> None:
         """
         Обрабатывает команду сделать ход
         """
@@ -186,7 +187,7 @@ Your command is >   """
         """
         нужные локально функции
         """
-
+        row, column = cell.row, cell.col
         def __wrong_ceil_chosen() -> None:
             print(
                 f"Invalid coordinates! You must choose a free cell within [0, 0]--[{Field.HEIGHT - 1}, {Field.WIDTH - 1}]. Try again please"
@@ -237,6 +238,51 @@ Your command is >   """
         else:
             __wrong_ceil_chosen()
 
+    def make_silent_move(self, cell : Field.Cell) -> None:
+
+        row, column = cell.row, cell.col
+
+        if self.current_state.field[row][column] == Player.Type.NONE:
+
+            state_after_move = Node(
+                parent=self.current_state,
+                move=Field.Cell(row, column)
+            )
+
+            self.current_state = state_after_move
+
+ 
+
+
+    def start_self_play(self, player, temp=1e-3):
+        """ start a self-play game using a MCTS player, reuse the search tree,
+        and store the self-play data: (state, mcts_probs, z) for training
+        """
+        self.__reset_game()
+
+        states, mcts_probs, current_players = [], [], []
+        while True:
+            move, move_probs = player.get_action_AI(self,
+                                                 temp=temp,
+                                                 return_prob=1)
+            # store the data
+            states.append(self.board.current_state())
+            mcts_probs.append(move_probs)
+            current_players.append(self.board.current_player)
+            # perform a move
+            self.board.do_move(move)
+      
+            end, winner = self.board.game_end()
+            if end:
+                # winner from the perspective of the current player of each state
+                winners_z = np.zeros(len(current_players))
+                if winner != -1:
+                    winners_z[np.array(current_players) == winner] = 1.0
+                    winners_z[np.array(current_players) != winner] = -1.0
+                # reset MCTS root node
+                player.reset_player()
+                
+                return winner, zip(states, mcts_probs, winners_z)
 
     def __reset_game(self) -> None:
         """
