@@ -78,6 +78,7 @@ class MCTS:
         if move in self._root._children:
             self._root = self._root._children[move]
         else:
+       
             self._root = Node(self._root, move)
         self._root._parent = None
 
@@ -90,19 +91,19 @@ class MCTS:
         """
         k = 0
         node = self._root
-        print(node._children)
+    
         while True:
             if node.is_leaf():
                 break
-            act, new_node = node.select_action(self.puct_constant)
+            act, new_node = node.select_action(self._puct_constant)
             node = new_node
             board.make_silent_move(act)
             k += 1
-        print('kkkkkkkkkkk', k)
-        action_probs, leaf_value = self._policy_value_function(board.current_state)
+    
+        action_probs = self._policy_value_function(board.current_state)
 
         game_res = board.current_state.check_game_state()
-
+        leaf_value = 0
         
         if game_res == GameStates.CONTINUE:
             node.expand_node(action_probs)
@@ -117,7 +118,7 @@ class MCTS:
         for _ in range(self._playout_number):
             self._playout(board)
 
-        act_visits = [(act, node._n_visits)
+        act_visits = [(act, node._visits_number)
                       for act, node in self._root._children.items()]
         acts, visits = zip(*act_visits)
         act_probs = softmax(1.0/temp * np.log(np.array(visits) + 1e-10))
@@ -150,6 +151,9 @@ class MCTSPlayer:
         move_probs = np.zeros(Field.HEIGHT*Field.WIDTH)
         if len(sensible_moves) > 0:
             acts, probs = self.mcts.get_move_probs(board, temp)
+            
+            acts = [cell.row*3 + cell.col for cell in acts]
+        
             move_probs[list(acts)] = probs
             if self._is_selfplay:
                 # add Dirichlet Noise for exploration (needed for
@@ -159,20 +163,22 @@ class MCTSPlayer:
                     p=0.75*probs + 0.25*np.random.dirichlet(0.3*np.ones(len(probs)))
                 )
                 # update the root node and reuse the search tree
-                self.mcts.update_with_move(move)
+                move_cell = Field.Cell(move // 3, move % 3)
+             
+                self.mcts.move_and_update(move_cell)
             else:
                 # with the default temp=1e-3, it is almost equivalent
                 # to choosing the move with the highest prob
-                move = np.random.choice(acts, p=probs)
+                move_cell = np.random.choice(acts, p=probs)
                 # reset the root node
-                self.mcts.update_with_move(-1)
-#                location = board.move_to_location(move)
-#                print("AI move: %d,%d\n" % (location[0], location[1]))
+                self.mcts.move_and_update(-1)
+                # location = board.move_to_location(move)
+                # print("AI move: %d,%d\n" % (location[0], location[1]))
 
             if return_prob:
-                return move, move_probs
+                return move_cell, move_probs
             else:
-                return move
+                return move_cell
         else:
             print("WARNING: the board is full")
     

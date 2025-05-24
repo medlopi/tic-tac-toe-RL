@@ -94,26 +94,24 @@ class PolicyValueNet():
             return act_probs, value.data.numpy()
 
     def policy_value_fn(self, board):
-        """
-        input: board
-        output: a list of (action, probability) tuples for each available
-        action and the score of the board state
-        """
         legal_positions = board.get_available_moves()
         current_state = np.ascontiguousarray(board.current_state().reshape(
-                -1, 4, self.board_width, self.board_height))
+            -1, 4, self.board_width, self.board_height  # 4 канала
+        ))
         if self.use_gpu:
             log_act_probs, value = self.policy_value_net(
-                    Variable(torch.from_numpy(current_state)).cuda().float())
-            act_probs = np.exp(log_act_probs.data.cpu().numpy().flatten())
+                Variable(torch.from_numpy(current_state)).cuda().float()
+            )
         else:
             log_act_probs, value = self.policy_value_net(
-                    Variable(torch.from_numpy(current_state)).float())
-            act_probs = np.exp(log_act_probs.data.numpy().flatten())
-        act_probs = zip(legal_positions, act_probs[legal_positions])
-        value = value.data[0][0]
-        print('value', value)
+                Variable(torch.from_numpy(current_state)).float()
+            )
+        act_probs = np.exp(log_act_probs.data.numpy().flatten())
+        act_probs = list(zip(legal_positions, act_probs[legal_positions]))  # Преобразуйте zip в список
+        value = value.item()  # Извлеките скалярное значение
+      
         return act_probs, value
+
 
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):
         """perform a training step"""

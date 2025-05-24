@@ -30,7 +30,7 @@ class Node:
             self.last_move: Field.Cell = Field.Cell()
         else:
             self.field = copy.deepcopy(parent.field)
-            self.field[move.row][move.col] = parent.who_moves
+            self.field[int(move.row)][int(move.col)] = parent.who_moves
             self.who_moves = Player.Type(abs(parent.who_moves.value - 1))
             self.free_cells_count = parent.free_cells_count - 1
             self.last_move = move
@@ -119,6 +119,43 @@ class Node:
             return GameStates.TIE
 
         return GameStates.CONTINUE
+
+    def current_state(self):
+        """
+        Возвращает текущее состояние доски в виде np.array формы (4, HEIGHT, WIDTH):
+        0-й канал: клетки текущего игрока (1.0, если занято, иначе 0.0)
+        1-й канал: клетки противника (1.0, если занято, иначе 0.0)
+        2-й канал: последняя сыгранная клетка (1.0 только для последнего хода)
+        3-й канал: чей ход (все заполнено 1.0, если ходит крестик, иначе 0.0)
+        """
+        state = np.zeros((4, Field.HEIGHT, Field.WIDTH), dtype=np.float32)
+        # Определяем тип противника
+        if self.who_moves == Player.Type.CROSS:
+            current = Player.Type.CROSS
+            opponent = Player.Type.NAUGHT
+        else:
+            current = Player.Type.NAUGHT
+            opponent = Player.Type.CROSS
+
+        for i in range(Field.HEIGHT):
+            for j in range(Field.WIDTH):
+                if self.field[i][j] == current:
+                    state[0][i][j] = 1.0
+                elif self.field[i][j] == opponent:
+                    state[1][i][j] = 1.0
+
+        # Последний ход
+        if self.last_move.row != -1 and self.last_move.col != -1:
+            state[2][self.last_move.row][self.last_move.col] = 1.0
+
+        # Канал чей ход
+        if self.who_moves == Player.Type.CROSS:
+            state[3][:, :] = 1.0  # Крестик ходит
+        else:
+            state[3][:, :] = 0.0  # Нолик ходит
+
+        return state
+
 
     def is_terminal(self):
         return self.check_game_state() != GameStates.CONTINUE

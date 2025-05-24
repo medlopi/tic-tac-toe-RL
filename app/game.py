@@ -266,15 +266,16 @@ Your command is >   """
                                                  temp=temp,
                                                  return_prob=1)
             # store the data
-            states.append(self.board.current_state())
+            states.append(self.current_state.current_state())
             mcts_probs.append(move_probs)
-            current_players.append(self.board.current_player)
+            current_players.append(self.current_state.who_moves)
             # perform a move
-            self.board.do_move(move)
+            self.make_silent_move(move)
       
-            end, winner = self.board.game_end()
-            if end:
+            game_res = self.current_state.check_game_state()
+            if game_res != GameStates.CONTINUE:
                 # winner from the perspective of the current player of each state
+                winner = 1 if game_res == GameStates.CROSS_WON else (-1 if game_res == GameStates.NAUGHT_WON else 0)
                 winners_z = np.zeros(len(current_players))
                 if winner != -1:
                     winners_z[np.array(current_players) == winner] = 1.0
@@ -283,6 +284,47 @@ Your command is >   """
                 player.reset_player()
                 
                 return winner, zip(states, mcts_probs, winners_z)
+            
+
+    def start_bot_play(self, player1 : MCTSPlayer, player2 : MCTSPlayer, start_player=0):
+        if start_player not in (0, 1):
+            raise Exception('start_player should be either 0 (player1 first) '
+                            'or 1 (player2 first)')
+        self.__reset_game()
+
+
+        if start_player:
+            move = player1.get_action_AI(self.current_state)
+            self.make_silent_move(move)
+            player2.mcts.move_and_update(move)
+
+        # self.board.init_board(start_player)
+        # p1, p2 = self.board.players
+        # player1.set_player_ind(p1)
+        # player2.set_player_ind(p2)
+        # players = {p1: player1, p2: player2}
+
+        while True:
+            move = player2.get_move()
+            self.make_silent_move(move)
+            player1.move_and_update(move)
+
+            res_game = self.current_state.check_game_state()
+
+            if res_game != GameStates.CONTINUE:
+                
+                return 1 if res_game == GameStates.CROSS_WON else (-1 if res_game == GameStates.NAUGHT_WON else 0)
+            
+            move = player1.get_move()
+            self.make_silent_move(move)
+            player2.move_and_update(move)
+
+            res_game = self.current_state.check_game_state()
+            
+            if res_game != GameStates.CONTINUE:
+                
+                return 1 if res_game == GameStates.CROSS_WON else (-1 if res_game == GameStates.NAUGHT_WON else 0)
+
 
     def __reset_game(self) -> None:
         """
