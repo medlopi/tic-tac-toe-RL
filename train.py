@@ -148,7 +148,7 @@ class TrainPipeline():
             self.policy_value_net.policy_value_function,
             self.puct_constant,
             self.playout_number,
-            selfplay=False
+            is_selfplay=False
         )
         pure_mcts_player = MCTS_pure_player(
             self.puct_constant,
