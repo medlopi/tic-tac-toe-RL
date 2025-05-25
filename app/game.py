@@ -39,7 +39,7 @@ class Game:
             print("Solver says that", really_best_cell.row, really_best_cell.col, "is a greate move")
 
         def __print_prediction_no_solver():
-            maybe_best_cell : Field.Cell = self.mcts_player.get_move()
+            maybe_best_cell: Field.Cell = self.mcts_player.get_move()
             print("MCTS says that", maybe_best_cell.row, maybe_best_cell.col, "may be a greate move")
 
         if (
@@ -187,7 +187,7 @@ Your command is >   """
 
             return Game.InputCommandType.ERROR
 
-    def __make_move(self, cell : Field.Cell) -> None:
+    def __make_move(self, cell: Field.Cell) -> None:
         """
         Обрабатывает команду сделать ход
         """
@@ -246,33 +246,30 @@ Your command is >   """
         else:
             __wrong_ceil_chosen()
 
-    def make_silent_move(self, cell : Field.Cell) -> None:
-
-        row, column = cell.row, cell.col
-
-        if self.current_state.field[row][column] == Player.Type.NONE:
-
+    def make_silent_move(self, cell: Field.Cell) -> None:
+        if self.current_state.field[cell.row][cell.col] == Player.Type.NONE:
             state_after_move = Node(
                 parent=self.current_state,
-                move=Field.Cell(row, column)
+                move=cell
             )
-
             self.current_state = state_after_move
+        else:
+            print("The cell is not empty")
 
- 
-
-
-    def start_self_play(self, player, temp=1e-3):
+    def start_self_play(self, player, temperature_contant: float = 1e-3):
         """ start a self-play game using a MCTS player, reuse the search tree,
-        and store the self-play data: (state, mcts_probs, z) for training
+        and store the self-play data: (state, mcts_probs, z) for training.
+        player: MCTS_alphazero_player
+        Also player.is_selfplay=True is needed
         """
         self.__reset_game()
 
         states, mcts_probs, current_players = [], [], []
         while True:
-            move, move_probs = player.get_action_AI(self,
-                                                 temp=temp,
-                                                 return_prob=1)
+            move, move_probs = player.get_move(
+                temperature_contant,
+                return_prob=True
+            )
             # store the data
             states.append(self.current_state.current_state())
             mcts_probs.append(move_probs)
@@ -280,12 +277,12 @@ Your command is >   """
             # perform a move
             self.make_silent_move(move)
       
-            game_res = self.current_state.check_game_state()
-            if game_res != GameStates.CONTINUE:
+            game_state = self.current_state.check_game_state()
+            if game_state != GameStates.CONTINUE:
+                winner = self.current_state.define_winner(game_state)
                 # winner from the perspective of the current player of each state
-                winner = 1 if game_res == GameStates.CROSS_WON else (-1 if game_res == GameStates.NAUGHT_WON else 0)
                 winners_z = np.zeros(len(current_players))
-                if winner != -1:
+                if winner != Player.Type.NONE:
                     winners_z[np.array(current_players) == winner] = 1.0
                     winners_z[np.array(current_players) != winner] = -1.0
                 # reset MCTS root node
@@ -294,44 +291,38 @@ Your command is >   """
                 return winner, zip(states, mcts_probs, winners_z)
             
 
-    def start_bot_play(self, player1 : MCTSPlayer, player2 : MCTSPlayer, start_player=0):
-        if start_player not in (0, 1):
-            raise Exception('start_player should be either 0 (player1 first) '
-                            'or 1 (player2 first)')
+    def start_bot_play(self, player1, player2, start_player: int) -> Player.Type:
+        """
+        player1, player2: MCTS_alphazero_player | MCTS_pure_player
+        """
         self.__reset_game()
 
+        if start_player == 1:
+            player1, player2 = player2, player1
 
-        if start_player:
-            move = player1.get_action_AI(self.current_state)
-            self.make_silent_move(move)
-            player2.mcts.move_and_update(move)
-
-        # self.board.init_board(start_player)
-        # p1, p2 = self.board.players
-        # player1.set_player_ind(p1)
-        # player2.set_player_ind(p2)
-        # players = {p1: player1, p2: player2}
+        players = {
+            Player.Type.CROSS: player1,
+            Player.Type.NAUGHT: player2
+        }
+        current = self.current_state.who_moves
+        opponent = Player.Type(abs(current.value - 1))
 
         while True:
-            move = player2.get_move()
+            move = players[current].get_move()
+            players[current].move_and_update(move)
+            players[opponent].move_and_update(move)
             self.make_silent_move(move)
-            player1.move_and_update(move)
 
-            res_game = self.current_state.check_game_state()
-
-            if res_game != GameStates.CONTINUE:
+            game_state = self.current_state.check_game_state()
+            if game_state != GameStates.CONTINUE:
+                if game_state == GameStates.TIE:
+                    return -1
+                elif game_state == GameStates.CROSS_WON:
+                    return 1 if start_player == 0 else 2
+                else:
+                    return 2 if start_player == 0 else 1
                 
-                return 1 if res_game == GameStates.CROSS_WON else (-1 if res_game == GameStates.NAUGHT_WON else 0)
-            
-            move = player1.get_move()
-            self.make_silent_move(move)
-            player2.move_and_update(move)
-
-            res_game = self.current_state.check_game_state()
-            
-            if res_game != GameStates.CONTINUE:
-                
-                return 1 if res_game == GameStates.CROSS_WON else (-1 if res_game == GameStates.NAUGHT_WON else 0)
+            current, opponent = opponent, current
 
 
     def __reset_game(self) -> None:
