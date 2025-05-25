@@ -4,8 +4,6 @@ from app.node import Node
 from enum import Enum
 import sys
 
-# from app.system import measure_performance  #TODO тестовый мусор
-
 
 sys.setrecursionlimit(10**5)
 

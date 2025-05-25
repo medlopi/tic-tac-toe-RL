@@ -67,9 +67,6 @@ Your command is >   """
             )
             print()  # для красоты
 
-           
-            
-            
 
             command_type: Game.InputCommandType = self.__process_input_command(
                 user_input
@@ -124,12 +121,18 @@ Your command is >   """
         """
         Проверяет, является ли входящая строка корректными координатами данного поля
         """
+        def __wrong_ceil_chosen() -> None:
+            print(
+                f"Invalid coordinates! You must choose a free cell within [0, 0]--[{Field.HEIGHT - 1}, {Field.WIDTH - 1}]. Try again please"
+            )
 
         if len(user_input.split()) == 2 and all([may_be_num.isalnum() for may_be_num in user_input.split()]):
             row, column = [int(num) for num in user_input.split()]
 
             if (0 <= row and row < Field.HEIGHT) and (0 <= column and column < Field.WIDTH):
                 return True
+            else:
+                __wrong_ceil_chosen()
             
         return False  # TODO не пересчитывать заново MC
 
@@ -173,6 +176,7 @@ Your command is >   """
 
         if self.__is_correct_coordinates(user_input):
             row, column = map(int, user_input.split())
+            
             self.mcts_player.move_and_update(Field.Cell(row, column))
             self.__make_move(Field.Cell(row, column))
 

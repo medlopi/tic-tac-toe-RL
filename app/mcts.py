@@ -3,6 +3,7 @@ from app.node import Node
 from app.player import Player
 import numpy as np
 
+
 def softmax(x):
     probs = np.exp(x - np.max(x))
     probs /= np.sum(probs)

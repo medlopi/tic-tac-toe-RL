@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
+# import numpy as np
 
 class TicTacToeNet(nn.Module):
     def __init__(self):
@@ -47,3 +47,4 @@ class ModelWrapper:
     def load_model(self, path):
         self.model.load_state_dict(torch.load(path, map_location=self.device))
         self.model.eval() 
+        
