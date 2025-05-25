@@ -1,6 +1,5 @@
 from app.game import Game
 from app.mcts import MCTSPlayer
-# from app.node import Node
 from app.game_config import MCTS_ITERATIONS
 
 
@@ -9,8 +8,6 @@ def main():
         mcts_player = MCTSPlayer(
             puct_constant=5,
             playout_number=MCTS_ITERATIONS,
-            selfplay=False, 
-            policy_value_fn=None
         )
 
         game: Game = Game(mcts_player)

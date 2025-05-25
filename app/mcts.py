@@ -4,12 +4,6 @@ from app.player import Player
 import numpy as np
 
 
-def softmax(x):
-    probs = np.exp(x - np.max(x))
-    probs /= np.sum(probs)
-    return probs
-
-
 def rollout_policy_function(node: Node) -> list[tuple[Field.Cell, float]]:
     available_moves = node.get_available_moves()
     move_probabilities = np.random.rand(len(available_moves))  # random rollout
