@@ -128,17 +128,9 @@ class Node:
         3-й канал: чей ход (все заполнено 1.0, если ходит крестик, иначе 0.0)
         """
         state = np.zeros((4, Field.HEIGHT, Field.WIDTH), dtype=np.float32)
-        
-        # Определяем тип текущего игрока и противника
-        # Текущий игрок - это тот, кто только что сделал ход
-        if self.who_moves == Player.Type.CROSS:
-            # Если сейчас ход крестика, значит последний ход был нолика
-            current = Player.Type.NAUGHT
-            opponent = Player.Type.CROSS
-        else:
-            # Если сейчас ход нолика, значит последний ход был крестика
-            current = Player.Type.CROSS
-            opponent = Player.Type.NAUGHT
+        # Определяем тип противника
+        current = self.who_moves
+        opponent = Player.Type(abs(current.value - 1))
 
         # Заполняем каналы 0 и 1 (клетки текущего игрока и противника)
         for i in range(Field.HEIGHT):
@@ -148,16 +140,27 @@ class Node:
                 elif self.field[i][j] == opponent:
                     state[1][i][j] = 1.0
 
-        # Заполняем канал 2 (последний ход)
-        # Проверяем, что это не начальное состояние
-        if not self.is_root() and self.last_move.row != -1 and self.last_move.col != -1:
+        # Последний ход
+        if self.last_move != Field.Cell(-1, -1):
             state[2][self.last_move.row][self.last_move.col] = 1.0
 
-        # Заполняем канал 3 (чей ход)
-        state[3][:, :] = 1.0 if self.who_moves == Player.Type.CROSS else 0.0
+        # Канал чей ход
+        if self.who_moves == Player.Type.CROSS:
+            state[3][:, :] = 1.0
 
         return state
-
+    
+    def define_winner(self, game_state: GameStates) -> (Player.Type | None):
+        if game_state != GameStates.CONTINUE:
+            if game_state == GameStates.CROSS_WON:
+                winner = Player.Type.CROSS
+            elif game_state == GameStates.NAUGHT_WON:
+                winner = Player.Type.NAUGHT
+            else:
+                winner = Player.Type.NONE
+            return winner
+        else:
+            print("This is not the end of game")
 
     def is_terminal(self):
         return self.check_game_state() != GameStates.CONTINUE
