@@ -2,7 +2,7 @@ from app.field import Field, GameStates
 from app.player import Player
 from typing import ForwardRef
 import copy
-import random
+# import random
 import numpy as np
 
 DIRECTIONS = [

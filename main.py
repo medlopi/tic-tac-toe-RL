@@ -1,6 +1,6 @@
 from app.game import Game
 from app.mcts import MCTSPlayer
-from app.node import Node
+# from app.node import Node
 from app.game_config import MCTS_ITERATIONS
 
 

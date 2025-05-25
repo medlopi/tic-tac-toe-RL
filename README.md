@@ -1,37 +1,27 @@
 # tic-tac-toe 
 
-## how to start?
+## Как запустить игру?
 
-Для начала в **app/game_config.py** нужно выставить интересующие Вас настройки.
+1. Для начала в **app/game_config.py** нужно выставить интересующие Вас настройки (#TODO: сделать это красивее).
 
-Если впервые скачали проект, пропишите:
-
+2. Если впервые скачали проект, создайте виртуальное окружение и установите зависимости:
 ```shell
-python3 -m venv .venv  
-```
-
-```shell
+python3 -m venv .venv
 source ./.venv/bin/activate
+pip install -r requirements.txt
 ```
 
-```shell
-pip install psutil
-```
-
+3. Чтобы запустить игру, пропишите:
 ```shell
 python3 ./main.py
 ```
 
-В следующие разы достаточно прописывать
+В следующие разы достаточно:
 ```shell
 source ./.venv/bin/activate
-```
-
-```shell
 python3 ./main.py
 ```
-
 
 ## TODO
 
-расставить try/catch!!!
+- Добавить обработку исключений (try/catch)
