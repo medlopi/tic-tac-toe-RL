@@ -1,10 +1,11 @@
+from app.starting_menu import StartMenu
 import pygame
 from pygame.locals import *
 from app.game import Game
 from app.field import Field
 from app.player import Player
 
-# Цветовая гамма
+# Цветовая гамма (и некоторые размеры)
 COLOR_BG = (140, 140, 140)
 COLOR_FIELD_BG = (180, 180, 180)
 COLOR_STATUS = (53, 0, 211)
@@ -16,11 +17,13 @@ COLOR_X_OUTLINE = (255, 180, 180)
 COLOR_O_MAIN = (75, 255, 75)
 COLOR_O_OUTLINE = (180, 255, 180)
 COLOR_WIN_LINE = (0, 0, 0)
-
 STATUS_HEIGHT = 50
 MESSAGE_HEIGHT = 40
 PADDING = 20
 MIN_WIDTH = 400
+COLOR_MENU_BUTTON = (120, 80, 180)
+MENU_BUTTON_WIDTH = 100
+MENU_BUTTON_HEIGHT = STATUS_HEIGHT - 10
 
 class PyGameInterface:
     def __init__(self, game=None):
@@ -82,7 +85,10 @@ class PyGameInterface:
         if event.type == QUIT:
             self.running = False
         elif event.type == MOUSEBUTTONDOWN:
-            if self.game_over:
+            menu_button_rect = self.draw()  # Получаем rect кнопки
+            if menu_button_rect.collidepoint(event.pos):
+                self.return_to_menu()
+            elif self.game_over:
                 self.reset_game()
             else:
                 self.handle_click(event.pos)
@@ -114,7 +120,7 @@ class PyGameInterface:
     def update_game_state(self):
         state = self.game._Game__check_game_state()
         current_player = self.game.current_state.who_moves
-        self.status_msg = f"Current: {Player.Icon[current_player]}"
+        self.status_msg = f"                    Current: {Player.Icon[current_player]}"
         
         if state == self.game.GameStates.CONTINUE:
             self.game_msg = "Game in progress"
@@ -134,26 +140,42 @@ class PyGameInterface:
 
     def draw(self):
         self.screen.fill(COLOR_BG)
-        self.draw_status_bar()
+        menu_button_rect = self.draw_status_bar()  # Получаем rect кнопки
         self.draw_message_panel()
         self.draw_game_field()
         
         if self.game_over:
-            self.draw_win_line()  # Рисуем победную черту поверх поля
+            self.draw_win_line()
             self.draw_game_over()
+        
+        return menu_button_rect
 
     def draw_status_bar(self):
-        # Рисуем панель с тем, кто ходит
         screen_width = self.screen.get_width()
         pygame.draw.rect(self.screen, COLOR_STATUS, (0, 0, screen_width, STATUS_HEIGHT))
+        menu_button_rect = pygame.Rect(
+            screen_width - MENU_BUTTON_WIDTH - 10, 
+            5, 
+            MENU_BUTTON_WIDTH, 
+            MENU_BUTTON_HEIGHT
+        )
+        pygame.draw.rect(self.screen, COLOR_MENU_BUTTON, menu_button_rect, border_radius=5)
         
-        # Центрируем текст в панели
+        font = pygame.font.SysFont('Arial', 24)
+        menu_text = font.render("MENU", True, COLOR_TEXT)
+        self.screen.blit(menu_text, (
+            menu_button_rect.centerx - menu_text.get_width()//2,
+            menu_button_rect.centery - menu_text.get_height()//2
+        ))
+        
         font = pygame.font.SysFont('Arial', 28, bold=True)
         text = font.render(self.status_msg, True, COLOR_TEXT)
-        text_rect = text.get_rect(center=(screen_width//2, STATUS_HEIGHT//2))
+        text_rect = text.get_rect(center=((screen_width - MENU_BUTTON_WIDTH)//2, STATUS_HEIGHT//2))
         self.screen.blit(text, text_rect)
+        
+        return menu_button_rect
 
-    def draw_message_panel(self): # Аналогично
+    def draw_message_panel(self):
         screen_width = self.screen.get_width()
         pygame.draw.rect(self.screen, COLOR_MESSAGE, 
                         (0, STATUS_HEIGHT, screen_width, MESSAGE_HEIGHT))
@@ -181,6 +203,12 @@ class PyGameInterface:
        
 
     def draw_cell(self, x, y, row, col):
+        if hasattr(self.game.current_state, 'last_move') and self.game.current_state.last_move.row != -1:
+            last_row, last_col = self.game.current_state.last_move.row, self.game.current_state.last_move.col
+            if row == last_row and col == last_col:
+                highlight = pygame.Surface((self.cell_size, self.cell_size), pygame.SRCALPHA)
+                highlight.fill((255, 255, 100, 30))  # Желтая подсветка клетки последнего хода
+                self.screen.blit(highlight, (x, y))
         # Рисуем границы между клетками
         pygame.draw.rect(self.screen, COLOR_GRID, (x, y, self.cell_size, self.cell_size), 3)
         
@@ -311,17 +339,37 @@ class PyGameInterface:
             return (start_r, start_c, end_r, end_c)
         
         return None
+    
+    def return_to_menu(self):
+        self.running = False
+        pygame.quit()
+        
+        current_m = Field.WIDTH
+        current_n = Field.HEIGHT
+        current_k = Field.STREAK_TO_WIN
+        current_ai = False  # Можно добавить функционал игры с ИИ
+        
+        # Запускаем меню
+        menu = StartMenu(m = current_m, n = current_n, k = current_k, ai = current_ai)
+        m, n, k, ai_enabled = menu.run()
+        
+        if m > 0 and n > 0 and k > 0:
+            Field.set_dimensions(m, n, k)
+            game = Game()
+            interface = PyGameInterface(game)
+            interface.run()
 
 
 
 if __name__ == "__main__":
-    pygame.init()
-    menu = StartMenu()
-    m, n, k, ai_enabled = menu.run()
-    
-    if m > 0 and n > 0 and k > 0:
+    while True:
+        pygame.init()
+        menu = StartMenu()
+        m, n, k, ai_enabled = menu.run()
+        if m <= 0 or n <= 0 or k <= 0:  # Если пользователь закрыл меню
+            break
+            
         Field.set_dimensions(m, n, k)
         game = Game()
-        
         interface = PyGameInterface(game)
         interface.run()

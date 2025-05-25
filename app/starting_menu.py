@@ -2,16 +2,16 @@ import pygame
 from pygame.locals import *
 
 class StartMenu:
-    def __init__(self):
+    def __init__(self, m=None, n=None, k=None, ai=None):
         pygame.init()
         self.base_width = 800
         self.base_height = 600
         self.screen = pygame.display.set_mode((self.base_width, self.base_height), pygame.RESIZABLE)
         pygame.display.set_caption("MxNxK Game - Settings")
-        self.m = "10" # Параметры по умолчанию в полях меню
-        self.n = "10"
-        self.k = "5"
-        self.ai_enabled = False
+        self.m = str(m) if m is not None else "10"
+        self.n = str(n) if n is not None else "10"
+        self.k = str(k) if k is not None else "5"
+        self.ai_enabled = ai if ai is not None else False
         self.active_field = None
         self.font = pygame.font.SysFont('Arial', 36)
         self.title_font = pygame.font.SysFont('Arial', 48, bold=True)
