@@ -11,6 +11,8 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
+from app.field import Field
+from app.node import Node
 import numpy as np
 
 
@@ -93,24 +95,25 @@ class PolicyValueNet():
             act_probs = np.exp(log_act_probs.data.numpy())
             return act_probs, value.data.numpy()
 
-    def policy_value_fn(self, board):
-        legal_positions = board.get_available_moves()
-        current_state = np.ascontiguousarray(board.current_state().reshape(
-            -1, 4, self.board_width, self.board_height  # 4 канала
+    def policy_value_function(self, node: Node):
+        legal_positions = node.get_available_moves()
+        current_state = np.ascontiguousarray(node.current_state().reshape(
+            -1, 4, self.board_width, self.board_height
         ))
         if self.use_gpu:
-            log_act_probs, value = self.policy_value_net(
+            log_action_probs, score = self.policy_value_net(
                 Variable(torch.from_numpy(current_state)).cuda().float()
             )
+            action_probs = np.exp(log_action_probs.data.cpu().numpy().flatten())
         else:
-            log_act_probs, value = self.policy_value_net(
+            log_act_probs, score = self.policy_value_net(
                 Variable(torch.from_numpy(current_state)).float()
             )
-        act_probs = np.exp(log_act_probs.data.numpy().flatten())
-        act_probs = list(zip(legal_positions, act_probs[legal_positions]))  # Преобразуйте zip в список
-        value = value.item()  # Извлеките скалярное значение
+            action_probs = np.exp(log_act_probs.data.numpy().flatten())
+        actions_with_probs = list(zip(legal_positions, action_probs))
+        score = score.data[0][0]
       
-        return act_probs, value
+        return actions_with_probs, score
 
 
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):
@@ -144,9 +147,9 @@ class PolicyValueNet():
         entropy = -torch.mean(
                 torch.sum(torch.exp(log_act_probs) * log_act_probs, 1)
                 )
-        return loss.data[0], entropy.data[0]
+        # return loss.data[0], entropy.data[0]
         #for pytorch version >= 0.5 please use the following line instead.
-        #return loss.item(), entropy.item()
+        return loss.item(), entropy.item()
 
     def get_policy_param(self):
         net_params = self.policy_value_net.state_dict()

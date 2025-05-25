@@ -10,12 +10,10 @@ import random
 import numpy as np
 from collections import defaultdict, deque
 from app.game import Game
-from app.mcts import MCTSPlayer
+from app.mcts_alphazero import MCTSPlayer as MCTS_alphazero_player
+from app.mcts import MCTSPlayer as MCTS_pure_player
 from app.field import CONST_FIELD_HEIGHT, CONST_FIELD_WIDTH, CONST_STREAK_TO_WIN_SIZE
-# from policy_value_net import PolicyValueNet  # Theano and Lasagne
-from app.policy_value_net_torch import PolicyValueNet  # Pytorch
-# from policy_value_net_tensorflow import PolicyValueNet # Tensorflow
-# from policy_value_net_keras import PolicyValueNet # Keras
+from app.policy_value_net_torch import PolicyValueNet
 
 
 class TrainPipeline():
@@ -28,9 +26,9 @@ class TrainPipeline():
         # training params
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
-        self.temp = 1.0  # the temperature param
-        self.n_playout = 2000  # num of simulations for each move
-        self.c_puct = 5
+        self.temperature_contant = 1.0  # the temperature param
+        self.playout_number = 2000  # num of simulations for each move
+        self.puct_constant = 5
         self.buffer_size = 10000
         self.batch_size = 512  # mini-batch size for training
         self.data_buffer = deque(maxlen=self.buffer_size)
@@ -52,10 +50,12 @@ class TrainPipeline():
             # start training from a new policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height)
-        self.mcts_player = MCTSPlayer(puct_constant=self.c_puct,
-                                      playout_number=self.n_playout,
-                                      selfplay=True,
-                                      policy_value_fn=self.policy_value_net.policy_value_fn)
+        self.mcts_player = MCTS_alphazero_player(
+            self.policy_value_net.policy_value_function,
+            self.puct_constant,
+            self.playout_number,
+            is_selfplay=True
+        )
         self.game = Game(self.mcts_player)
 
     def get_equi_data(self, play_data):
@@ -83,8 +83,10 @@ class TrainPipeline():
     def collect_selfplay_data(self, n_games=1):
         """collect self-play data for training"""
         for i in range(n_games):
-            winner, play_data = self.game.start_self_play(self.mcts_player,
-                                                          temp=self.temp)
+            winner, play_data = self.game.start_self_play(
+                self.mcts_player,
+                self.temperature_contant
+            )
             play_data = list(play_data)[:]
             self.episode_len = len(play_data)
             # augment the data
@@ -142,18 +144,23 @@ class TrainPipeline():
         Evaluate the trained policy by playing against the pure MCTS player
         Note: this is only for monitoring the progress of training
         """
-        current_mcts_player = MCTSPlayer(puct_constant=self.c_puct,
-                                         playout_number=self.n_playout,
-                                         selfplay=False, 
-                                         policy_value_fn=self.policy_value_net.policy_value_fn)
-        pure_mcts_player = MCTSPlayer(puct_constant=5,
-                                     playout_number=self.pure_mcts_playout_num,
-                                     selfplay=False, policy_value_fn=None)
+        current_mcts_player = MCTS_alphazero_player(
+            self.policy_value_net.policy_value_function,
+            self.puct_constant,
+            self.playout_number,
+            selfplay=False
+        )
+        pure_mcts_player = MCTS_pure_player(
+            self.puct_constant,
+            self.pure_mcts_playout_num
+        )
         win_cnt = defaultdict(int)
         for i in range(n_games):
-            winner = self.game.start_bot_play(current_mcts_player,
-                                          pure_mcts_player,
-                                          start_player=i % 2)
+            winner = self.game.start_bot_play(
+                current_mcts_player,
+                pure_mcts_player,
+                start_player=i % 2
+            )
             win_cnt[winner] += 1
         win_ratio = 1.0*(win_cnt[1] + 0.5*win_cnt[-1]) / n_games
         print("num_playouts:{}, win: {}, lose: {}, tie:{}".format(
