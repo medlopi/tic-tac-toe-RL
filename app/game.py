@@ -125,9 +125,13 @@ Your command is >   """
         Проверяет, является ли входящая строка корректными координатами данного поля
         """
 
-        return len(user_input.split()) == 2 and all(
-            [may_be_num.isalnum() for may_be_num in user_input.split()]
-        )
+        if len(user_input.split()) == 2 and all([may_be_num.isalnum() for may_be_num in user_input.split()]):
+            row, column = [int(num) for num in user_input.split()]
+
+            if (0 <= row and row < Field.HEIGHT) and (0 <= column and column < Field.WIDTH):
+                return True
+            
+        return False  # TODO не пересчитывать заново MC
 
     def __process_input_command(self, user_input: str) -> InputCommandType:
         """
