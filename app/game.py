@@ -315,12 +315,14 @@ Your command is >   """
 
             game_state = self.current_state.check_game_state()
             if game_state != GameStates.CONTINUE:
+                player1.reset_player()
+                player2.reset_player()
                 if game_state == GameStates.TIE:
                     return -1
                 elif game_state == GameStates.CROSS_WON:
-                    return 1 if start_player == 0 else 2
+                    return start_player == 0
                 else:
-                    return 2 if start_player == 0 else 1
+                    return start_player == 1
                 
             current, opponent = opponent, current
 
