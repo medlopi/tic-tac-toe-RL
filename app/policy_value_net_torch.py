@@ -96,7 +96,8 @@ class PolicyValueNet():
             return act_probs, value.data.numpy()
 
     def policy_value_function(self, node: Node):
-        legal_positions = node.get_available_moves()
+        available_moves = node.get_available_moves()
+        legal_positions = [move.row * Field.WIDTH + move.col for move in available_moves]
         current_state = np.ascontiguousarray(node.current_state().reshape(
             -1, 4, self.board_width, self.board_height
         ))
@@ -110,7 +111,7 @@ class PolicyValueNet():
                 Variable(torch.from_numpy(current_state)).float()
             )
             action_probs = np.exp(log_act_probs.data.numpy().flatten())
-        actions_with_probs = list(zip(legal_positions, action_probs))
+        actions_with_probs = list(zip(available_moves, action_probs[legal_positions]))
         score = score.data[0][0]
       
         return actions_with_probs, score
