@@ -1,7 +1,9 @@
 from app.game import Game
 from app.mcts import MCTSPlayer
+from app.start_menu import StartMenu
+from app.interface import PyGameInterface
 from app.game_config import MCTS_ITERATIONS
-
+import pygame
 
 def main():
     try:
@@ -9,9 +11,14 @@ def main():
             puct_constant=5,
             playout_number=MCTS_ITERATIONS,
         )
-
-        game: Game = Game(mcts_player)
-        game.start_processing_input()
+        pygame.init()
+        menu = StartMenu()
+        m, n, k, ai_enabled = menu.run()
+        if m > 0 and n > 0 and k > 0:
+            game: Game = Game(mcts_player)
+            # game.start_processing_input()
+            interface = PyGameInterface(game)
+            interface.run()
         
     except KeyboardInterrupt:
         print("\n\nProgram stopped!")
