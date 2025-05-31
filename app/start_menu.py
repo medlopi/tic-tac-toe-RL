@@ -2,7 +2,7 @@ import pygame
 from pygame.locals import *
 
 class StartMenu:
-    def __init__(self, m=None, n=None, k=None, ai=None):
+    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None):
         pygame.init()
         self.base_width = 800
         self.base_height = 600
@@ -12,6 +12,8 @@ class StartMenu:
         self.n = str(n) if n is not None else "10"
         self.k = str(k) if k is not None else "5"
         self.ai_enabled = ai if ai is not None else False
+        self.mcts_enabled = mcts if mcts is not None else False
+        self.player_symbol = player_symbol if player_symbol is not None else "X"
         self.active_field = None
         self.font = pygame.font.SysFont('Arial', 36)
         self.title_font = pygame.font.SysFont('Arial', 48, bold=True)
@@ -22,6 +24,10 @@ class StartMenu:
         self.COLOR_BUTTON = (90, 120, 200)
         self.COLOR_AI_ON = (100, 200, 100)
         self.COLOR_AI_OFF = (200, 100, 100)
+        self.COLOR_MCTS_ON = (100, 200, 200)
+        self.COLOR_MCTS_OFF = (200, 100, 150)
+        self.COLOR_SYMBOL_ON = (130, 100, 250)
+        self.COLOR_SYMBOL_OFF = (100, 100, 100)
         self.running = True
         self.fullscreen = False
 
@@ -31,23 +37,46 @@ class StartMenu:
         
         # Центрирование
         content_width = 600
-        content_height = 500
+        content_height = 550
         offset_x = (screen_width - content_width) // 2
         offset_y = (screen_height - content_height) // 2
+        
         # Рисуем кнопки
         title = self.title_font.render("MxNxK Settings", True, self.COLOR_TEXT)
-        self.screen.blit(title, (offset_x + (content_width - title.get_width())//2, offset_y + 30))
-        self.draw_input("Width (M):", self.m, offset_y + 120, 0, offset_x)
-        self.draw_input("Height (N):", self.n, offset_y + 200, 1, offset_x)
-        self.draw_input("Win Streak (K):", self.k, offset_y + 280, 2, offset_x)
+        self.screen.blit(title, (offset_x + (content_width - title.get_width())//2, offset_y + 20))
         
-        ai_rect = pygame.Rect(offset_x + 150, offset_y + 360, 300, 50)
+        self.draw_input("Width (M):", self.m, offset_y + 100, 0, offset_x)
+        self.draw_input("Height (N):", self.n, offset_y + 170, 1, offset_x)
+        self.draw_input("Win Streak (K):", self.k, offset_y + 240, 2, offset_x)
+        
+        # Кнопки AI и MCTS
+        ai_rect = pygame.Rect(offset_x + 50, offset_y + 310, 240, 50)
         ai_color = self.COLOR_AI_ON if self.ai_enabled else self.COLOR_AI_OFF
         pygame.draw.rect(self.screen, ai_color, ai_rect, border_radius=10)
-        ai_text = self.font.render("AI: " + ("ON" if self.ai_enabled else "OFF"), True, self.COLOR_TEXT)
+        ai_text = self.font.render("Play with AI", True, self.COLOR_TEXT)
         self.screen.blit(ai_text, (ai_rect.centerx - ai_text.get_width()//2, ai_rect.centery - ai_text.get_height()//2))
         
-        start_rect = pygame.Rect(offset_x + 150, offset_y + 440, 300, 60)
+        mcts_rect = pygame.Rect(offset_x + 310, offset_y + 310, 240, 50)
+        mcts_color = self.COLOR_MCTS_ON if self.mcts_enabled else self.COLOR_MCTS_OFF
+        pygame.draw.rect(self.screen, mcts_color, mcts_rect, border_radius=10)
+        mcts_text = self.font.render("Play with MCTS", True, self.COLOR_TEXT)
+        self.screen.blit(mcts_text, (mcts_rect.centerx - mcts_text.get_width()//2, mcts_rect.centery - mcts_text.get_height()//2))
+        
+        # Кнопки выбора символа (появляются только если выбран AI или MCTS)
+        if self.ai_enabled or self.mcts_enabled:
+            x_rect = pygame.Rect(offset_x + 150, offset_y + 380, 120, 50)
+            o_rect = pygame.Rect(offset_x + 330, offset_y + 380, 120, 50)
+            x_color = self.COLOR_SYMBOL_ON if self.player_symbol == "X" else self.COLOR_SYMBOL_OFF
+            o_color = self.COLOR_SYMBOL_ON if self.player_symbol == "O" else self.COLOR_SYMBOL_OFF
+            pygame.draw.rect(self.screen, x_color, x_rect, border_radius=10)
+            pygame.draw.rect(self.screen, o_color, o_rect, border_radius=10)
+            x_text = self.font.render("Play as X", True, self.COLOR_TEXT)
+            o_text = self.font.render("Play as O", True, self.COLOR_TEXT)
+            self.screen.blit(x_text, (x_rect.centerx - x_text.get_width()//2, x_rect.centery - x_text.get_height()//2))
+            self.screen.blit(o_text, (o_rect.centerx - o_text.get_width()//2, o_rect.centery - o_text.get_height()//2))
+        
+        # Кнопка Start
+        start_rect = pygame.Rect(offset_x + 150, offset_y + 450, 300, 60)
         pygame.draw.rect(self.screen, self.COLOR_BUTTON, start_rect, border_radius=10)
         start_text = self.title_font.render("START", True, self.COLOR_TEXT)
         self.screen.blit(start_text, (start_rect.centerx - start_text.get_width() // 2, start_rect.centery - start_text.get_height()//2))
@@ -76,7 +105,7 @@ class StartMenu:
             self.draw()
             clock.tick(30)
         
-        return int(self.m), int(self.n), int(self.k), self.ai_enabled
+        return int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol
 
     def handle_event(self, event):
         if event.type == QUIT:
@@ -102,9 +131,11 @@ class StartMenu:
             x, y = event.pos
             screen_width, screen_height = self.screen.get_size()
             offset_x = (screen_width - 600) // 2
-            offset_y = (screen_height - 500) // 2
+            offset_y = (screen_height - 550) // 2
+            
+            # Проверка полей ввода
             for i in range(3):
-                field_y = offset_y + 120 + i*80
+                field_y = offset_y + 100 + i*70
                 if (offset_x + 300 <= x <= offset_x + 500 and 
                     field_y <= y <= field_y + 40):
                     self.active_field = i
@@ -112,13 +143,31 @@ class StartMenu:
             else:
                 self.active_field = None
             
-            if (offset_x + 150 <= x <= offset_x + 450 and 
-                offset_y + 360 <= y <= offset_y + 410):
+            # Проверка кнопок AI и MCTS
+            if (offset_x + 50 <= x <= offset_x + 290 and 
+                offset_y + 310 <= y <= offset_y + 360):
                 self.ai_enabled = not self.ai_enabled
+                if self.ai_enabled:
+                    self.mcts_enabled = False
+
+            if (offset_x + 310 <= x <= offset_x + 550 and 
+                offset_y + 310 <= y <= offset_y + 360):
+                self.mcts_enabled = not self.mcts_enabled
+                if self.mcts_enabled:
+                    self.ai_enabled = False
             
-            # Проверка кнопки Start (после нажатия на неё начинается игра)
+            # Проверка кнопок выбора символа (только если AI или MCTS включены)
+            if self.ai_enabled or self.mcts_enabled:
+                if (offset_x + 150 <= x <= offset_x + 270 and 
+                    offset_y + 380 <= y <= offset_y + 430):
+                    self.player_symbol = "X"
+                if (offset_x + 330 <= x <= offset_x + 450 and 
+                    offset_y + 380 <= y <= offset_y + 430):
+                    self.player_symbol = "O"
+            
+            # Проверка кнопки Start
             if (offset_x + 150 <= x <= offset_x + 450 and 
-                offset_y + 440 <= y <= offset_y + 500):
+                offset_y + 450 <= y <= offset_y + 510):
                 try:
                     m = int(self.m)
                     n = int(self.n)
