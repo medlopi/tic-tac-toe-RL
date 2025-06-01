@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-An implementation of the training pipeline of AlphaZero for Gomoku
-
-@author: Junxiao Song
-"""
-
 from __future__ import print_function
 import random
 import numpy as np

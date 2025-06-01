@@ -32,12 +32,7 @@ class MCTS:
         if game_state == GameStates.CONTINUE:
             node.expand_node(actions_with_probs)
         else:
-            if game_state == GameStates.CROSS_WON:
-                winner = Player.Type.CROSS
-            elif game_state == GameStates.NAUGHT_WON:
-                winner = Player.Type.NAUGHT
-            else:
-                winner = Player.Type.NONE
+            winner = node.define_winner(game_state)
             
             if winner == player:
                 leaf_value = 1
