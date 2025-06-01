@@ -160,7 +160,7 @@ class Node:
         if self.who_moves == Player.Type.CROSS:
             state[3][:, :] = 1.0
 
-        return state
+        return state[:, ::-1, :]
     
     def define_winner(self, game_state: GameStates) -> Union[Player.Type, None]:
         if game_state != GameStates.CONTINUE:

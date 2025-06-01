@@ -18,7 +18,7 @@ class Field:
         cls.STREAK_TO_WIN = streak
         
     class Cell:
-        def __init__(self, row=-1, col=1):
+        def __init__(self, row=-1, col=-1):
             self.row = row
             self.col = col
 
