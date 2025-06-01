@@ -20,7 +20,6 @@ class MCTS:
 
     def _run_playout(self) -> None:
         node = self._root
-        player = node.who_moves
         while True:
             if node.is_leaf():
                 break
@@ -34,7 +33,7 @@ class MCTS:
         else:
             winner = node.define_winner(game_state)
             
-            if winner == player:
+            if winner == node.who_moves:
                 leaf_value = 1
             elif winner == Player.Type.NONE:
                 leaf_value = 0
