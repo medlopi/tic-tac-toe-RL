@@ -27,7 +27,7 @@ MENU_BUTTON_WIDTH = 100
 MENU_BUTTON_HEIGHT = STATUS_HEIGHT - 10
 
 class PyGameInterface:
-    def __init__(self, game=None):
+    def __init__(self, mcts_enabled : bool, player_type : Player.Type, game=None):
         self.game = game if game else Game()
         self.running = True
         self.game_over = False
@@ -36,6 +36,11 @@ class PyGameInterface:
         self.game_over_start_time = 0
         self.game_over_duration = 3000
         self.game_msg = "Game in progress"
+        self.mcts_enabled = mcts_enabled
+        self.player_type = player_type
+        self.need_computer_move = True if (mcts_enabled and player_type == Player.Type.NAUGHT) else False
+        self.allowed_to_click = False  # Замените инициализацию
+        self.update_allowed_click() 
         self.cell_size = self.calculate_cell_size()
         self.init_window()
         self.update_game_state()
@@ -49,6 +54,14 @@ class PyGameInterface:
         self.screen = pygame.display.set_mode((self.default_width, self.default_height), pygame.RESIZABLE)
         pygame.display.set_caption("MxNxK Game")
         self.handle_resize()
+
+
+    def update_allowed_click(self):
+        """Обновляет разрешение на клики на основе текущего игрока"""
+        if self.mcts_enabled:
+            self.allowed_to_click = (self.game.current_state.who_moves == self.player_type)
+        else:
+            self.allowed_to_click = True
 
     def handle_resize(self):
         screen_width, screen_height = self.screen.get_size()
@@ -72,7 +85,13 @@ class PyGameInterface:
             current_time = pygame.time.get_ticks()
             if self.game_over and (current_time - self.game_over_start_time) > self.game_over_duration:
                 self.reset_game()
-            
+            if self.need_computer_move:
+                move = self.game.mcts_player.get_move()
+                self.game.make_silent_move(move)
+                self.game.mcts_player.move_and_update(move)
+                self.need_computer_move = False
+                self.update_allowed_click()
+
             for event in pygame.event.get():
                 self.handle_event(event)
             
@@ -83,22 +102,25 @@ class PyGameInterface:
         pygame.quit()
 
     def handle_event(self, event):
-        if event.type == QUIT:
-            self.running = False
-        elif event.type == MOUSEBUTTONDOWN:
-            menu_button_rect = self.draw()  # Получаем rect кнопки
-            if menu_button_rect.collidepoint(event.pos):
-                self.return_to_menu()
-            elif self.game_over:
-                self.reset_game()
-            else:
-                self.handle_click(event.pos)
-        elif event.type == KEYDOWN:
-            if event.key == K_f:
-                self.toggle_fullscreen()
-        elif event.type == VIDEORESIZE:
-            if not self.fullscreen:
-                self.handle_resize()
+        if self.allowed_to_click:
+            if event.type == QUIT:
+                self.running = False
+            elif event.type == MOUSEBUTTONDOWN:
+                menu_button_rect = self.draw()  # Получаем rect кнопки
+                if menu_button_rect.collidepoint(event.pos):
+                    self.return_to_menu()
+                elif self.game_over:
+                    self.reset_game()
+                else:
+                    self.handle_click(event.pos)
+            elif event.type == KEYDOWN:
+                if event.key == K_f:
+                    self.toggle_fullscreen()
+            elif event.type == VIDEORESIZE:
+                if not self.fullscreen:
+                    self.handle_resize()
+        
+
 
     def toggle_fullscreen(self):
         self.fullscreen = not self.fullscreen
@@ -116,12 +138,18 @@ class PyGameInterface:
             if self.game.current_state.field[row][col] == Player.Type.NONE:
                 self.game.make_silent_move(Field.Cell(row, col))
                 self.update_game_state()
-
+                self.game.mcts_player.move_and_update(Field.Cell(row, col))
+                if self.mcts_enabled and self.game.current_state.who_moves != self.player_type:
+                    self.allowed_to_click = False
+                    self.need_computer_move = True
+                
+                
 
     def update_game_state(self):
         state = self.game.current_state.check_game_state()
         current_player = self.game.current_state.who_moves
         self.status_msg = f"                    Current: {Player.Icon[current_player]}"
+        self.update_allowed_click()
         
         if state == GameStates.CONTINUE:
             self.game_msg = "Game in progress"
@@ -352,12 +380,12 @@ class PyGameInterface:
         
         # Запускаем меню
         menu = StartMenu(m = current_m, n = current_n, k = current_k, ai = current_ai)
-        m, n, k, ai_enabled = menu.run()
+        m, n, k, ai_enabled, mcts_enabled, player_type = menu.run()
         
         if m > 0 and n > 0 and k > 0:
             Field.set_dimensions(m, n, k)
             game = Game()
-            interface = PyGameInterface(game)
+            interface = PyGameInterface(game, mcts_enabled, player_type)
             interface.run()
 
 
@@ -366,11 +394,11 @@ if __name__ == "__main__":
     while True:
         pygame.init()
         menu = StartMenu()
-        m, n, k, ai_enabled = menu.run()
+        m, n, k, ai_enabled, mcts_enabled, player_type = menu.run()
         if m <= 0 or n <= 0 or k <= 0:  # Если пользователь закрыл меню
             break
             
         Field.set_dimensions(m, n, k)
         game = Game()
-        interface = PyGameInterface(game)
+        interface = PyGameInterface(game, mcts_enabled, player_type)
         interface.run()

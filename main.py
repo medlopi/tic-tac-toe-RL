@@ -13,11 +13,11 @@ def main():
         )
         pygame.init()
         menu = StartMenu()
-        m, n, k, ai_enabled = menu.run()
+        m, n, k, ai_enabled, mcts_enabled, player_type = menu.run()
         if m > 0 and n > 0 and k > 0:
             game: Game = Game(mcts_player)
             # game.start_processing_input()
-            interface = PyGameInterface(game)
+            interface = PyGameInterface(mcts_enabled, player_type, game)
             interface.run()
         
     except KeyboardInterrupt:

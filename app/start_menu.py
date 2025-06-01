@@ -1,5 +1,6 @@
 import pygame
 from pygame.locals import *
+from app.player import Player
 
 class StartMenu:
     def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None):
@@ -8,12 +9,12 @@ class StartMenu:
         self.base_height = 600
         self.screen = pygame.display.set_mode((self.base_width, self.base_height), pygame.RESIZABLE)
         pygame.display.set_caption("MxNxK Game - Settings")
-        self.m = str(m) if m is not None else "10"
-        self.n = str(n) if n is not None else "10"
-        self.k = str(k) if k is not None else "5"
+        self.m = str(m) if m is not None else "3"
+        self.n = str(n) if n is not None else "3"
+        self.k = str(k) if k is not None else "3"
         self.ai_enabled = ai if ai is not None else False
         self.mcts_enabled = mcts if mcts is not None else False
-        self.player_symbol = player_symbol if player_symbol is not None else "X"
+        self.player_symbol = player_symbol if player_symbol is not None else Player.Type.CROSS
         self.active_field = None
         self.font = pygame.font.SysFont('Arial', 36)
         self.title_font = pygame.font.SysFont('Arial', 48, bold=True)
@@ -66,8 +67,8 @@ class StartMenu:
         if self.ai_enabled or self.mcts_enabled:
             x_rect = pygame.Rect(offset_x + 150, offset_y + 380, 120, 50)
             o_rect = pygame.Rect(offset_x + 330, offset_y + 380, 120, 50)
-            x_color = self.COLOR_SYMBOL_ON if self.player_symbol == "X" else self.COLOR_SYMBOL_OFF
-            o_color = self.COLOR_SYMBOL_ON if self.player_symbol == "O" else self.COLOR_SYMBOL_OFF
+            x_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.CROSS else self.COLOR_SYMBOL_OFF
+            o_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.NAUGHT else self.COLOR_SYMBOL_OFF
             pygame.draw.rect(self.screen, x_color, x_rect, border_radius=10)
             pygame.draw.rect(self.screen, o_color, o_rect, border_radius=10)
             x_text = self.font.render("Play as X", True, self.COLOR_TEXT)
@@ -160,10 +161,10 @@ class StartMenu:
             if self.ai_enabled or self.mcts_enabled:
                 if (offset_x + 150 <= x <= offset_x + 270 and 
                     offset_y + 380 <= y <= offset_y + 430):
-                    self.player_symbol = "X"
+                    self.player_symbol = Player.Type.CROSS
                 if (offset_x + 330 <= x <= offset_x + 450 and 
                     offset_y + 380 <= y <= offset_y + 430):
-                    self.player_symbol = "O"
+                    self.player_symbol = Player.Type.NAUGHT
             
             # Проверка кнопки Start
             if (offset_x + 150 <= x <= offset_x + 450 and 
