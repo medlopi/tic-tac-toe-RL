@@ -60,6 +60,7 @@ class PyGameInterface:
         """Обновляет разрешение на клики на основе текущего игрока"""
         if self.mcts_enabled:
             self.allowed_to_click = (self.game.current_state.who_moves == self.player_type)
+            self.need_computer_move = (self.game.current_state.who_moves != self.player_type)
         else:
             self.allowed_to_click = True
 
@@ -89,6 +90,7 @@ class PyGameInterface:
                 move = self.game.mcts_player.get_move()
                 self.game.make_silent_move(move)
                 self.game.mcts_player.move_and_update(move)
+                self.update_game_state()
                 self.need_computer_move = False
                 self.update_allowed_click()
 
@@ -325,6 +327,7 @@ class PyGameInterface:
         self.game_over = False
         self.win_line = None
         self.update_game_state()
+        self.update_allowed_click()
 
     def find_win_line(self): # Нам нужен не просто факт победы (как в солвере). Нужны координаты победной линии
         field = self.game.current_state.field
