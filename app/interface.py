@@ -4,6 +4,8 @@ from pygame.locals import *
 from app.game import Game
 from app.field import Field, GameStates
 from app.player import Player
+from app.mcts import MCTSPlayer
+from app.game_config import MCTS_ITERATIONS
 
 
 # Цветовая гамма (и некоторые размеры)
@@ -81,6 +83,7 @@ class PyGameInterface:
             self.screen = pygame.display.set_mode((screen_width, required_height), pygame.RESIZABLE)
 
     def run(self):
+        print("RUNNING")
         clock = pygame.time.Clock()
         while self.running:
             current_time = pygame.time.get_ticks()
@@ -388,21 +391,10 @@ class PyGameInterface:
         
         if m > 0 and n > 0 and k > 0:
             Field.set_dimensions(m, n, k)
-            game = Game()
-            interface = PyGameInterface(game, mcts_enabled, player_type)
+            mcts_player = MCTSPlayer(
+                puct_constant=5,
+                playout_number=MCTS_ITERATIONS,
+            )
+            game = Game(mcts_player)
+            interface = PyGameInterface(mcts_enabled, player_type, game)
             interface.run()
-
-
-
-if __name__ == "__main__":
-    while True:
-        pygame.init()
-        menu = StartMenu()
-        m, n, k, ai_enabled, mcts_enabled, player_type = menu.run()
-        if m <= 0 or n <= 0 or k <= 0:  # Если пользователь закрыл меню
-            break
-            
-        Field.set_dimensions(m, n, k)
-        game = Game()
-        interface = PyGameInterface(game, mcts_enabled, player_type)
-        interface.run()

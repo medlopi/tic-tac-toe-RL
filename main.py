@@ -9,18 +9,20 @@ from app.mcts import MCTSPlayer
 from app.start_menu import StartMenu
 from app.interface import PyGameInterface
 from app.game_config import MCTS_ITERATIONS
+from app.field import Field
 import pygame
 
 def main():
     try:
-        mcts_player = MCTSPlayer(
-            puct_constant=5,
-            playout_number=MCTS_ITERATIONS,
-        )
         pygame.init()
         menu = StartMenu()
         m, n, k, ai_enabled, mcts_enabled, player_type = menu.run()
         if m > 0 and n > 0 and k > 0:
+            Field.set_dimensions(m, n, k)
+            mcts_player = MCTSPlayer(
+                puct_constant=5,
+                playout_number=MCTS_ITERATIONS,
+            )
             game: Game = Game(mcts_player)
             # game.start_processing_input()
             interface = PyGameInterface(mcts_enabled, player_type, game)
