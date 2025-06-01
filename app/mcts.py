@@ -1,6 +1,7 @@
 from app.field import Field, GameStates
 from app.node import Node
 from app.player import Player
+from app.system import measure_mcts_performance
 import numpy as np
 
 
@@ -60,6 +61,7 @@ class MCTS:
         else:
             return 1 if winner == player else -1
 
+    @measure_mcts_performance
     def get_move(self) -> Field.Cell:
         for _ in range(self._playout_number):
             self._run_playout()
@@ -87,3 +89,4 @@ class MCTSPlayer:
     
     def move_and_update(self, move: Field.Cell) -> None:
         self.mcts.move_and_update(move)
+        

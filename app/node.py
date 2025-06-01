@@ -2,7 +2,6 @@ from app.field import Field, GameStates
 from app.player import Player
 from typing import ForwardRef, Union
 import copy
-# import random
 import numpy as np
 
 DIRECTIONS = tuple([
@@ -33,6 +32,19 @@ class Node:
             self.who_moves = Player.Type(abs(parent.who_moves.value - 1))
             self.free_cells_count = parent.free_cells_count - 1
             self.last_move = move
+
+    def get_depth(self) -> int:
+        """
+        Возвращает глубину узла в дереве (расстояние от корня)
+        """
+        depth = 0
+        current = self
+        while current._parent is not None:
+            depth += 1
+
+            current = current._parent
+            
+        return depth
 
     def get_node_value(self, puct_constant: float) -> float:
         self._exploration_bonus = (puct_constant * self._prior_probability *

@@ -2,6 +2,13 @@ import pygame
 from pygame.locals import *
 from app.player import Player
 
+#TODO добавить кнопку выхода
+#TODO не триггериться по скроллу по ячейке
+#TODO не давать превентивный ход делать (пока mcts просчитывается запретить в целом тыкать)
+"""
+#TODO при выборе размера поля стоит либо курсор добавить, либо (что лучше будет на мой взгляд), сразу после нажатия на поле все стирается (либо выделяется просто, но тогда и курсор нужен) и можно писать свое
+"""
+
 class StartMenu:
     def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None):
         pygame.init()

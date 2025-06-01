@@ -74,3 +74,10 @@ python main.py
 source ./.venv/bin/activate
 python3 main.py
 ```
+
+
+## TODO
+
+- см start_menu.py
+
+- сделать нормальное разбиение файлов по папкам
