@@ -86,7 +86,8 @@ class PyGameInterface:
             current_time = pygame.time.get_ticks()
             if self.game_over and (current_time - self.game_over_start_time) > self.game_over_duration:
                 self.reset_game()
-            if self.need_computer_move:
+            if self.need_computer_move and not self.game_over:
+                
                 move = self.game.mcts_player.get_move()
                 self.game.make_silent_move(move)
                 self.game.mcts_player.move_and_update(move)
