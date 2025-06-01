@@ -1,3 +1,9 @@
+import sys
+
+if sys.version_info < (3, 10):
+    print("Для работы программы требуется Python 3.10 или выше")
+    sys.exit(1)
+
 from app.game import Game
 from app.mcts import MCTSPlayer
 from app.start_menu import StartMenu
