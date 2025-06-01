@@ -12,7 +12,7 @@ class Field:
     STREAK_TO_WIN = CONST_STREAK_TO_WIN_SIZE
 
     class Cell:
-        def __init__(self, row=-1, col=1):
+        def __init__(self, row=-1, col=-1):
             self.row = row
             self.col = col
 

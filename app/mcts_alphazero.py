@@ -48,7 +48,7 @@ class MCTS:
 
         node.update_all_ancestors_recursively(-leaf_value)
 
-    def get_move_probs(self, temperature_contant: float) -> Field.Cell:
+    def get_move_probs(self, temperature_contant: float):
         for _ in range(self._playout_number):
             self._run_playout()
 
@@ -78,11 +78,7 @@ class MCTSPlayer:
         self._is_selfplay = is_selfplay
 
     def reset_player(self) -> None:
-        self.mcts = MCTS(
-            self.mcts._policy_value_function,
-            self.mcts._puct_constant,
-            self.mcts._playout_number
-        )
+        self.mcts._root = Node()
 
     def move_and_update(self, move: Field.Cell) -> None:
         self.mcts.move_and_update(move)

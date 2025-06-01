@@ -80,7 +80,7 @@ class MCTSPlayer:
         self.mcts = MCTS(policy_value_function, puct_constant, playout_number)
 
     def reset_player(self) -> None:
-        self.mcts = MCTS(policy_value_function, self.mcts._puct_constant, self.mcts._playout_number)
+        self.mcts._root = Node()
 
     def get_move(self) -> Field.Cell:
         return self.mcts.get_move()
