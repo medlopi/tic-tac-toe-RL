@@ -14,19 +14,20 @@ class StartMenu:
         self.k = str(k) if k is not None else "3"
         self.ai_enabled = ai if ai is not None else False
         self.mcts_enabled = mcts if mcts is not None else False
+        # По умолчанию включен режим игры с другом
+        self.friend_enabled = not (self.ai_enabled or self.mcts_enabled)
         self.player_symbol = player_symbol if player_symbol is not None else Player.Type.CROSS
         self.active_field = None
         self.font = pygame.font.SysFont('Arial', 36)
         self.title_font = pygame.font.SysFont('Arial', 48, bold=True)
+        self.small_font = pygame.font.SysFont('Arial', 28)  # Шрифт для подписей
         self.COLOR_BG = (50, 50, 70)
         self.COLOR_INPUT = (80, 80, 100)
         self.COLOR_ACTIVE = (120, 120, 150)
         self.COLOR_TEXT = (240, 240, 240)
         self.COLOR_BUTTON = (90, 120, 200)
-        self.COLOR_AI_ON = (100, 200, 100)
-        self.COLOR_AI_OFF = (200, 100, 100)
-        self.COLOR_MCTS_ON = (100, 200, 200)
-        self.COLOR_MCTS_OFF = (200, 100, 150)
+        self.COLOR_MODE_ON = (100, 200, 100)  # Зеленый для выбранного режима
+        self.COLOR_MODE_OFF = (200, 100, 100)  # Красный для невыбранных
         self.COLOR_SYMBOL_ON = (130, 100, 250)
         self.COLOR_SYMBOL_OFF = (100, 100, 100)
         self.running = True
@@ -50,23 +51,40 @@ class StartMenu:
         self.draw_input("Height (N):", self.n, offset_y + 170, 1, offset_x)
         self.draw_input("Win Streak (K):", self.k, offset_y + 240, 2, offset_x)
         
-        # Кнопки AI и MCTS
-        ai_rect = pygame.Rect(offset_x + 50, offset_y + 310, 240, 50)
-        ai_color = self.COLOR_AI_ON if self.ai_enabled else self.COLOR_AI_OFF
-        pygame.draw.rect(self.screen, ai_color, ai_rect, border_radius=10)
-        ai_text = self.font.render("Play with AI", True, self.COLOR_TEXT)
-        self.screen.blit(ai_text, (ai_rect.centerx - ai_text.get_width()//2, ai_rect.centery - ai_text.get_height()//2))
+        # Надпись "Выберите режим игры"
+        mode_label = self.small_font.render("                                              Play with:", True, self.COLOR_TEXT)
+        self.screen.blit(mode_label, (offset_x + 30, offset_y + 280))
         
-        mcts_rect = pygame.Rect(offset_x + 310, offset_y + 310, 240, 50)
-        mcts_color = self.COLOR_MCTS_ON if self.mcts_enabled else self.COLOR_MCTS_OFF
+        # Кнопки выбора режима игры (Friend, AI, MCTS)
+        friend_rect = pygame.Rect(offset_x + 30, offset_y + 310, 180, 50)
+        ai_rect = pygame.Rect(offset_x + 220, offset_y + 310, 170, 50)
+        mcts_rect = pygame.Rect(offset_x + 400, offset_y + 310, 170, 50)
+        
+        # Рисуем кнопки с соответствующими цветами
+        friend_color = self.COLOR_MODE_ON if self.friend_enabled else self.COLOR_MODE_OFF
+        ai_color = self.COLOR_MODE_ON if self.ai_enabled else self.COLOR_MODE_OFF
+        mcts_color = self.COLOR_MODE_ON if self.mcts_enabled else self.COLOR_MODE_OFF
+        
+        pygame.draw.rect(self.screen, friend_color, friend_rect, border_radius=10)
+        pygame.draw.rect(self.screen, ai_color, ai_rect, border_radius=10)
         pygame.draw.rect(self.screen, mcts_color, mcts_rect, border_radius=10)
-        mcts_text = self.font.render("Play with MCTS", True, self.COLOR_TEXT)
+        
+        # Текст для кнопок
+        friend_text = self.font.render("Friend", True, self.COLOR_TEXT)
+        ai_text = self.font.render("AI", True, self.COLOR_TEXT)
+        mcts_text = self.font.render("MCTS", True, self.COLOR_TEXT)
+        
+        self.screen.blit(friend_text, (friend_rect.centerx - friend_text.get_width()//2, friend_rect.centery - friend_text.get_height()//2))
+        self.screen.blit(ai_text, (ai_rect.centerx - ai_text.get_width()//2, ai_rect.centery - ai_text.get_height()//2))
         self.screen.blit(mcts_text, (mcts_rect.centerx - mcts_text.get_width()//2, mcts_rect.centery - mcts_text.get_height()//2))
         
         # Кнопки выбора символа (появляются только если выбран AI или MCTS)
         if self.ai_enabled or self.mcts_enabled:
-            x_rect = pygame.Rect(offset_x + 150, offset_y + 380, 120, 50)
-            o_rect = pygame.Rect(offset_x + 330, offset_y + 380, 120, 50)
+            symbol_label = self.small_font.render("                                      Choose your side:", True, self.COLOR_TEXT)
+            self.screen.blit(symbol_label, (offset_x + 30, offset_y + 370))
+            
+            x_rect = pygame.Rect(offset_x + 150, offset_y + 400, 120, 50)
+            o_rect = pygame.Rect(offset_x + 330, offset_y + 400, 120, 50)
             x_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.CROSS else self.COLOR_SYMBOL_OFF
             o_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.NAUGHT else self.COLOR_SYMBOL_OFF
             pygame.draw.rect(self.screen, x_color, x_rect, border_radius=10)
@@ -77,7 +95,7 @@ class StartMenu:
             self.screen.blit(o_text, (o_rect.centerx - o_text.get_width()//2, o_rect.centery - o_text.get_height()//2))
         
         # Кнопка Start
-        start_rect = pygame.Rect(offset_x + 150, offset_y + 450, 300, 60)
+        start_rect = pygame.Rect(offset_x + 150, offset_y + 470, 300, 60)
         pygame.draw.rect(self.screen, self.COLOR_BUTTON, start_rect, border_radius=10)
         start_text = self.title_font.render("START", True, self.COLOR_TEXT)
         self.screen.blit(start_text, (start_rect.centerx - start_text.get_width() // 2, start_rect.centery - start_text.get_height()//2))
@@ -144,31 +162,37 @@ class StartMenu:
             else:
                 self.active_field = None
             
-            # Проверка кнопок AI и MCTS
-            if (offset_x + 50 <= x <= offset_x + 290 and 
+            # Проверка кнопок режима игры
+            if (offset_x + 30 <= x <= offset_x + 210 and 
                 offset_y + 310 <= y <= offset_y + 360):
-                self.ai_enabled = not self.ai_enabled
-                if self.ai_enabled:
-                    self.mcts_enabled = False
+                self.friend_enabled = True
+                self.ai_enabled = False
+                self.mcts_enabled = False
 
-            if (offset_x + 310 <= x <= offset_x + 550 and 
+            if (offset_x + 220 <= x <= offset_x + 390 and 
                 offset_y + 310 <= y <= offset_y + 360):
-                self.mcts_enabled = not self.mcts_enabled
-                if self.mcts_enabled:
-                    self.ai_enabled = False
+                self.ai_enabled = True
+                self.friend_enabled = False
+                self.mcts_enabled = False
+
+            if (offset_x + 400 <= x <= offset_x + 570 and 
+                offset_y + 310 <= y <= offset_y + 360):
+                self.mcts_enabled = True
+                self.friend_enabled = False
+                self.ai_enabled = False
             
             # Проверка кнопок выбора символа (только если AI или MCTS включены)
             if self.ai_enabled or self.mcts_enabled:
                 if (offset_x + 150 <= x <= offset_x + 270 and 
-                    offset_y + 380 <= y <= offset_y + 430):
+                    offset_y + 400 <= y <= offset_y + 450):
                     self.player_symbol = Player.Type.CROSS
                 if (offset_x + 330 <= x <= offset_x + 450 and 
-                    offset_y + 380 <= y <= offset_y + 430):
+                    offset_y + 400 <= y <= offset_y + 450):
                     self.player_symbol = Player.Type.NAUGHT
             
             # Проверка кнопки Start
             if (offset_x + 150 <= x <= offset_x + 450 and 
-                offset_y + 450 <= y <= offset_y + 510):
+                offset_y + 470 <= y <= offset_y + 530):
                 try:
                     m = int(self.m)
                     n = int(self.n)
