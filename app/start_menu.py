@@ -52,8 +52,8 @@ class StartMenu:
         self.draw_input("Win Streak (K):", self.k, offset_y + 240, 2, offset_x)
         
         # Надпись "Выберите режим игры"
-        mode_label = self.small_font.render("                                              Play with:", True, self.COLOR_TEXT)
-        self.screen.blit(mode_label, (offset_x + 30, offset_y + 280))
+        mode_label = self.small_font.render("Play with:", True, self.COLOR_TEXT)
+        self.screen.blit(mode_label, (offset_x + (content_width - mode_label.get_width())//2, offset_y + 280))
         
         # Кнопки выбора режима игры (Friend, AI, MCTS)
         friend_rect = pygame.Rect(offset_x + 30, offset_y + 310, 180, 50)
@@ -80,11 +80,14 @@ class StartMenu:
         
         # Кнопки выбора символа (появляются только если выбран AI или MCTS)
         if self.ai_enabled or self.mcts_enabled:
-            symbol_label = self.small_font.render("                                      Choose your side:", True, self.COLOR_TEXT)
-            self.screen.blit(symbol_label, (offset_x + 30, offset_y + 370))
+            symbol_label = self.small_font.render("Choose your side:", True, self.COLOR_TEXT)
+            self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, offset_y + 370))
             
-            x_rect = pygame.Rect(offset_x + 150, offset_y + 400, 120, 50)
-            o_rect = pygame.Rect(offset_x + 330, offset_y + 400, 120, 50)
+            # центрируем
+            button_spacing = 20  # расстояние между ними
+            total_width = 190 * 2 + button_spacing  
+            x_rect = pygame.Rect(offset_x + (content_width - total_width) // 2, offset_y + 400, 190, 50)
+            o_rect = pygame.Rect(offset_x + (content_width - total_width) // 2 + 190 + button_spacing, offset_y + 400, 190, 50)
             x_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.CROSS else self.COLOR_SYMBOL_OFF
             o_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.NAUGHT else self.COLOR_SYMBOL_OFF
             pygame.draw.rect(self.screen, x_color, x_rect, border_radius=10)
