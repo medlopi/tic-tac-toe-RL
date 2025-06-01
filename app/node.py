@@ -1,6 +1,6 @@
 from app.field import Field, GameStates
 from app.player import Player
-from typing import ForwardRef
+from typing import ForwardRef, Union
 import copy
 # import random
 import numpy as np
@@ -150,7 +150,7 @@ class Node:
 
         return state
     
-    def define_winner(self, game_state: GameStates) -> (Player.Type | None):
+    def define_winner(self, game_state: GameStates) -> Union[Player.Type, None]:
         if game_state != GameStates.CONTINUE:
             if game_state == GameStates.CROSS_WON:
                 winner = Player.Type.CROSS
