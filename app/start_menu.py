@@ -2,12 +2,8 @@ import pygame
 from pygame.locals import *
 from app.player import Player
 
-#TODO добавить кнопку выхода
 #TODO не триггериться по скроллу по ячейке
-#TODO не давать превентивный ход делать (пока mcts просчитывается запретить в целом тыкать)
-"""
-#TODO при выборе размера поля стоит либо курсор добавить, либо (что лучше будет на мой взгляд), сразу после нажатия на поле все стирается (либо выделяется просто, но тогда и курсор нужен) и можно писать свое
-"""
+#TODO 2 потока (mcts тормозит интерфейс при запуске игры)
 
 class StartMenu:
     def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None):
@@ -27,7 +23,7 @@ class StartMenu:
         self.active_field = None
         self.font = pygame.font.SysFont('Arial', 36)
         self.title_font = pygame.font.SysFont('Arial', 48, bold=True)
-        self.small_font = pygame.font.SysFont('Arial', 28)  # Шрифт для подписей
+        self.small_font = pygame.font.SysFont('Arial', 28)
         self.COLOR_BG = (50, 50, 70)
         self.COLOR_INPUT = (80, 80, 100)
         self.COLOR_ACTIVE = (120, 120, 150)
@@ -39,18 +35,23 @@ class StartMenu:
         self.COLOR_SYMBOL_OFF = (100, 100, 100)
         self.running = True
         self.fullscreen = False
+        self.cursor_visible = False
+        self.cursor_timer = 0
+        self.cursor_blink_interval = 500
+        self.error_message = ""
+        self.error_timer = 0
+        self.error_duration = 1000
+        self.error_field = None
 
     def draw(self):
         self.screen.fill(self.COLOR_BG)
         screen_width, screen_height = self.screen.get_size()
         
-        # Центрирование
         content_width = 600
         content_height = 550
         offset_x = (screen_width - content_width) // 2
         offset_y = (screen_height - content_height) // 2
         
-        # Рисуем кнопки
         title = self.title_font.render("MxNxK Settings", True, self.COLOR_TEXT)
         self.screen.blit(title, (offset_x + (content_width - title.get_width())//2, offset_y + 20))
         
@@ -58,16 +59,13 @@ class StartMenu:
         self.draw_input("Height (N):", self.n, offset_y + 170, 1, offset_x)
         self.draw_input("Win Streak (K):", self.k, offset_y + 240, 2, offset_x)
         
-        # Надпись "Выберите режим игры"
         mode_label = self.small_font.render("Play with:", True, self.COLOR_TEXT)
         self.screen.blit(mode_label, (offset_x + (content_width - mode_label.get_width())//2, offset_y + 280))
         
-        # Кнопки выбора режима игры (Friend, AI, MCTS)
         friend_rect = pygame.Rect(offset_x + 30, offset_y + 310, 180, 50)
         ai_rect = pygame.Rect(offset_x + 220, offset_y + 310, 170, 50)
         mcts_rect = pygame.Rect(offset_x + 400, offset_y + 310, 170, 50)
         
-        # Рисуем кнопки с соответствующими цветами
         friend_color = self.COLOR_MODE_ON if self.friend_enabled else self.COLOR_MODE_OFF
         ai_color = self.COLOR_MODE_ON if self.ai_enabled else self.COLOR_MODE_OFF
         mcts_color = self.COLOR_MODE_ON if self.mcts_enabled else self.COLOR_MODE_OFF
@@ -76,7 +74,6 @@ class StartMenu:
         pygame.draw.rect(self.screen, ai_color, ai_rect, border_radius=10)
         pygame.draw.rect(self.screen, mcts_color, mcts_rect, border_radius=10)
         
-        # Текст для кнопок
         friend_text = self.font.render("Friend", True, self.COLOR_TEXT)
         ai_text = self.font.render("AI", True, self.COLOR_TEXT)
         mcts_text = self.font.render("MCTS", True, self.COLOR_TEXT)
@@ -90,8 +87,7 @@ class StartMenu:
             symbol_label = self.small_font.render("Choose your side:", True, self.COLOR_TEXT)
             self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, offset_y + 370))
             
-            # центрируем
-            button_spacing = 20  # расстояние между ними
+            button_spacing = 20
             total_width = 190 * 2 + button_spacing  
             x_rect = pygame.Rect(offset_x + (content_width - total_width) // 2, offset_y + 400, 190, 50)
             o_rect = pygame.Rect(offset_x + (content_width - total_width) // 2 + 190 + button_spacing, offset_y + 400, 190, 50)
@@ -104,7 +100,6 @@ class StartMenu:
             self.screen.blit(x_text, (x_rect.centerx - x_text.get_width()//2, x_rect.centery - x_text.get_height()//2))
             self.screen.blit(o_text, (o_rect.centerx - o_text.get_width()//2, o_rect.centery - o_text.get_height()//2))
         
-        # Кнопка Start
         start_rect = pygame.Rect(offset_x + 150, offset_y + 470, 300, 60)
         pygame.draw.rect(self.screen, self.COLOR_BUTTON, start_rect, border_radius=10)
         start_text = self.title_font.render("START", True, self.COLOR_TEXT)
@@ -122,12 +117,45 @@ class StartMenu:
         field_rect = pygame.Rect(input_x + 300, input_y, 200, 40)
         pygame.draw.rect(self.screen, color, field_rect, border_radius=5)
         
-        text = self.font.render(value, True, self.COLOR_TEXT)
-        self.screen.blit(text, (field_rect.x + 10, field_rect.centery - text.get_height() // 2))
+        text_surface = self.font.render(value, True, self.COLOR_TEXT)
+        text_width = min(text_surface.get_width(), field_rect.width - 20)
+        text_rect = pygame.Rect(field_rect.x + 10, field_rect.centery - text_surface.get_height() // 2, 
+                            text_width, text_surface.get_height())
+        
+        if text_surface.get_width() > field_rect.width - 20:
+            cropped_surface = pygame.Surface((field_rect.width - 20, text_surface.get_height()))
+            cropped_surface.blit(text_surface, (0, 0), 
+                                (text_surface.get_width() - (field_rect.width - 20), 0, 
+                                field_rect.width - 20, text_surface.get_height()))
+            self.screen.blit(cropped_surface, text_rect)
+        else:
+            self.screen.blit(text_surface, text_rect)
+        
+        if self.active_field == index and self.cursor_visible:
+            cursor_x = text_rect.right + 2 if text_rect.width == field_rect.width - 20 else text_rect.right + 2
+            pygame.draw.line(self.screen, self.COLOR_TEXT, 
+                            (cursor_x, text_rect.top + 2), 
+                            (cursor_x, text_rect.bottom - 2), 2)
+
+        if (hasattr(self, 'error_field') and self.error_message and self.error_field == index and pygame.time.get_ticks() - self.error_timer < self.error_duration):
+            error_surface = self.small_font.render(self.error_message, True, (255, 100, 100))
+            self.screen.blit(error_surface, (field_rect.right + 10, field_rect.centery - error_surface.get_height() // 2))
 
     def run(self):
         clock = pygame.time.Clock()
         while self.running:
+            current_time = pygame.time.get_ticks()
+            # Обновляем состояние курсора
+            if self.active_field is not None:
+                if current_time - self.cursor_timer > self.cursor_blink_interval:
+                    self.cursor_visible = not self.cursor_visible
+                    self.cursor_timer = current_time
+            else:
+                self.cursor_visible = False
+            
+            if self.error_message and current_time - self.error_timer > self.error_duration:
+                self.error_message = ""
+            
             for event in pygame.event.get():
                 self.handle_event(event)
             
@@ -135,7 +163,28 @@ class StartMenu:
             clock.tick(30)
         
         return int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol
-
+    
+    def validate_k(self, show_message=True):
+        try:
+            if not self.m or not self.n or not self.k:
+                return False
+                
+            m = int(self.m)
+            n = int(self.n) 
+            k = int(self.k)
+            
+            max_dimension = max(m, n)
+            if k > max_dimension:
+                if show_message:
+                    self.error_message = f"K set to {max_dimension} (max field size)"
+                    self.error_timer = pygame.time.get_ticks()
+                    self.error_field = 2
+                self.k = str(max_dimension)
+                return True
+        except ValueError:
+            pass
+        return False
+    
     def handle_event(self, event):
         if event.type == QUIT:
             self.running = False
@@ -151,11 +200,33 @@ class StartMenu:
                     current = [self.m, self.n, self.k]
                     current[self.active_field] = current[self.active_field][:-1]
                     self.m, self.n, self.k = current
+                    if self.active_field in [0, 1]:
+                        self.validate_k(show_message=False)
+                    elif self.active_field == 2:
+                        self.validate_k(show_message=True)
                 elif event.unicode.isdigit():
                     current = [self.m, self.n, self.k]
                     if len(current[self.active_field]) < 3:
-                        current[self.active_field] += event.unicode
-                        self.m, self.n, self.k = current
+                        new_value = current[self.active_field] + event.unicode
+                        try:
+                            new_int_value = int(new_value)
+                            if new_int_value > 30:
+                                # Ограничиваем значение размеров до 30 на 30
+                                current[self.active_field] = "30"
+                                self.error_message = "Max value is 30"
+                                self.error_field = self.active_field
+                                self.error_timer = pygame.time.get_ticks()
+                            else:
+                                current[self.active_field] = new_value
+                            
+                            self.m, self.n, self.k = current
+                            if self.active_field in [0, 1]:
+                                self.validate_k(show_message=False)
+                            elif self.active_field == 2:
+                                self.validate_k(show_message=True)
+                                
+                        except ValueError:
+                            pass
         elif event.type == MOUSEBUTTONDOWN:
             x, y = event.pos
             screen_width, screen_height = self.screen.get_size()
@@ -170,9 +241,11 @@ class StartMenu:
                     self.active_field = i
                     break
             else:
+                old_active = self.active_field
                 self.active_field = None
+                if old_active is not None:
+                    self.validate_k(show_message=True)
             
-            # Проверка кнопок режима игры
             if (offset_x + 30 <= x <= offset_x + 210 and 
                 offset_y + 310 <= y <= offset_y + 360):
                 self.friend_enabled = True
@@ -191,7 +264,6 @@ class StartMenu:
                 self.friend_enabled = False
                 self.ai_enabled = False
             
-            # Проверка кнопок выбора символа (только если AI или MCTS включены)
             if self.ai_enabled or self.mcts_enabled:
                 if (offset_x + 150 <= x <= offset_x + 270 and 
                     offset_y + 400 <= y <= offset_y + 450):
@@ -200,16 +272,18 @@ class StartMenu:
                     offset_y + 400 <= y <= offset_y + 450):
                     self.player_symbol = Player.Type.NAUGHT
             
-            # Проверка кнопки Start
             if (offset_x + 150 <= x <= offset_x + 450 and 
                 offset_y + 470 <= y <= offset_y + 530):
                 try:
+                    if not self.m or not self.n or not self.k:
+                        return
                     m = int(self.m)
                     n = int(self.n)
                     k = int(self.k)
                     if m > 0 and n > 0 and k > 0:
+                        self.validate_k(show_message=True)
                         self.running = False
-                except:
+                except ValueError:
                     pass
         elif event.type == VIDEORESIZE:
             if not self.fullscreen:
