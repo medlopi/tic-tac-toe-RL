@@ -1,5 +1,6 @@
 from app.start_menu import StartMenu
 import pygame
+import threading
 from pygame.locals import *
 from app.game import Game
 from app.field import Field, GameStates
@@ -7,8 +8,6 @@ from app.player import Player
 from app.mcts import MCTSPlayer
 from app.game_config import MCTS_ITERATIONS
 
-
-# Цветовая гамма (и некоторые размеры)
 COLOR_BG = (140, 140, 140)
 COLOR_FIELD_BG = (180, 180, 180)
 COLOR_STATUS = (53, 0, 211)
@@ -29,19 +28,22 @@ MENU_BUTTON_WIDTH = 100
 MENU_BUTTON_HEIGHT = STATUS_HEIGHT - 10
 
 class PyGameInterface:
-    def __init__(self, mcts_enabled : bool, player_type : Player.Type, game=None):
+    def __init__(self, mcts_enabled : bool, player_type : Player.Type, game=None, fullscreen_start=False, initial_size=None):
         self.game = game if game else Game()
         self.running = True
         self.game_over = False
         self.win_line = None
-        self.fullscreen = False
+        self.fullscreen = fullscreen_start
+        self.initial_size = initial_size
+        if fullscreen_start:
+            self.windowed_size = initial_size
         self.game_over_start_time = 0
         self.game_over_duration = 3000
         self.game_msg = "Game in progress"
         self.mcts_enabled = mcts_enabled
         self.player_type = player_type
         self.need_computer_move = True if (mcts_enabled and player_type == Player.Type.NAUGHT) else False
-        self.allowed_to_click = False  # Замените инициализацию
+        self.allowed_to_click = False 
         self.update_allowed_click() 
         self.cell_size = self.calculate_cell_size()
         self.init_window()
@@ -51,9 +53,22 @@ class PyGameInterface:
         return 780 // max(Field.HEIGHT, Field.WIDTH)
 
     def init_window(self):
-        self.default_width = max(Field.WIDTH * self.cell_size + PADDING*2, MIN_WIDTH)
-        self.default_height = Field.HEIGHT * self.cell_size + STATUS_HEIGHT + MESSAGE_HEIGHT + PADDING*2
-        self.screen = pygame.display.set_mode((self.default_width, self.default_height), pygame.RESIZABLE)
+        flags = 0
+        size = (0, 0)
+
+        if self.fullscreen:
+            flags = pygame.FULLSCREEN
+            size = (0, 0)
+        elif self.initial_size:
+            flags = pygame.RESIZABLE
+            size = self.initial_size
+        else:
+            flags = pygame.RESIZABLE
+            self.default_width = max(Field.WIDTH * self.cell_size + PADDING*2, MIN_WIDTH)
+            self.default_height = Field.HEIGHT * self.cell_size + STATUS_HEIGHT + MESSAGE_HEIGHT + PADDING*2
+            size = (self.default_width, self.default_height)
+        
+        self.screen = pygame.display.set_mode(size, flags)
         pygame.display.set_caption("MxNxK Game")
         self.handle_resize()
 
@@ -85,48 +100,65 @@ class PyGameInterface:
     def run(self):
         print("RUNNING")
         clock = pygame.time.Clock()
-        while self.running:
-            current_time = pygame.time.get_ticks()
-            if self.game_over and (current_time - self.game_over_start_time) > self.game_over_duration:
-                self.reset_game()
-            if self.need_computer_move and not self.game_over:
-                
-                move = self.game.mcts_player.get_move()
-                self.game.make_silent_move(move)
-                self.game.mcts_player.move_and_update(move)
-                self.update_game_state()
-                self.need_computer_move = False
-                self.update_allowed_click()
+        calculated_move = None
+        calculating_thread = None
 
+        while self.running:
             for event in pygame.event.get():
                 self.handle_event(event)
             
+            current_time = pygame.time.get_ticks()
+            if self.game_over and (current_time - self.game_over_start_time) > self.game_over_duration:
+                self.reset_game()
+
+            if self.need_computer_move and not self.game_over and calculating_thread is None:
+                def calculate_move():
+                    nonlocal calculated_move
+                    calculated_move = self.game.mcts_player.get_move()
+
+                calculating_thread = threading.Thread(target=calculate_move, daemon=True)
+                calculating_thread.start()
+
+            if calculating_thread and not calculating_thread.is_alive():
+                if calculated_move is not None:
+                    self.game.make_silent_move(calculated_move)
+                    self.game.mcts_player.move_and_update(calculated_move)
+                    self.update_game_state()
+                    self.need_computer_move = False
+                    self.update_allowed_click()
+                    calculated_move = None
+                calculating_thread = None
+
             self.draw()
             pygame.display.flip()
             clock.tick(30)
-        
-        pygame.quit()
 
     def handle_event(self, event):
-        if self.allowed_to_click:
-            if event.type == QUIT:
-                self.running = False
-            elif event.type == MOUSEBUTTONDOWN:
-                menu_button_rect = self.draw()  # Получаем rect кнопки
-                if menu_button_rect.collidepoint(event.pos):
-                    self.return_to_menu()
-                elif self.game_over:
+        if event.type == QUIT:
+            self.running = False
+            return
+
+        if event.type == KEYDOWN:
+            if event.key == K_f:
+                self.toggle_fullscreen()
+        
+        if event.type == VIDEORESIZE:
+            if not self.fullscreen:
+                self.handle_resize()
+
+        if event.type == MOUSEBUTTONDOWN:
+            menu_button_rect = pygame.Rect(
+                self.screen.get_width() - MENU_BUTTON_WIDTH - 10, 5, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT
+            )
+            if menu_button_rect.collidepoint(event.pos):
+                self.return_to_menu()
+                return
+
+            if self.allowed_to_click:
+                if self.game_over:
                     self.reset_game()
                 else:
                     self.handle_click(event.pos)
-            elif event.type == KEYDOWN:
-                if event.key == K_f:
-                    self.toggle_fullscreen()
-            elif event.type == VIDEORESIZE:
-                if not self.fullscreen:
-                    self.handle_resize()
-        
-
 
     def toggle_fullscreen(self):
         self.fullscreen = not self.fullscreen
@@ -143,13 +175,15 @@ class PyGameInterface:
         if 0 <= row < Field.HEIGHT and 0 <= col < Field.WIDTH:
             if self.game.current_state.field[row][col] == Player.Type.NONE:
                 self.game.make_silent_move(Field.Cell(row, col))
+                if self.mcts_enabled:
+                    self.game.mcts_player.move_and_update(Field.Cell(row, col))
+                
                 self.update_game_state()
-                self.game.mcts_player.move_and_update(Field.Cell(row, col))
-                if self.mcts_enabled and self.game.current_state.who_moves != self.player_type:
+                
+                if self.mcts_enabled and not self.game_over:
                     self.allowed_to_click = False
                     self.need_computer_move = True
-                
-                
+                              
 
     def update_game_state(self):
         state = self.game.current_state.check_game_state()
@@ -175,7 +209,7 @@ class PyGameInterface:
 
     def draw(self):
         self.screen.fill(COLOR_BG)
-        menu_button_rect = self.draw_status_bar()  # Получаем rect кнопки
+        menu_button_rect = self.draw_status_bar()
         self.draw_message_panel()
         self.draw_game_field()
         
@@ -242,42 +276,38 @@ class PyGameInterface:
             last_row, last_col = self.game.current_state.last_move.row, self.game.current_state.last_move.col
             if row == last_row and col == last_col:
                 highlight = pygame.Surface((self.cell_size, self.cell_size), pygame.SRCALPHA)
-                highlight.fill((255, 255, 100, 30))  # Желтая подсветка клетки последнего хода
+                highlight.fill((255, 255, 100, 30))
                 self.screen.blit(highlight, (x, y))
-        # Рисуем границы между клетками
+        
         pygame.draw.rect(self.screen, COLOR_GRID, (x, y, self.cell_size, self.cell_size), 3)
         
-        # Красивые Х и О
         cell = self.game.current_state.field[row][col]
         if cell == Player.Type.CROSS:
-            # Окантовка крестика
+            
             pygame.draw.line(self.screen, COLOR_X_OUTLINE,
                             (x + 10, y + 10), (x + self.cell_size - 10, y + self.cell_size - 10), 8)
             pygame.draw.line(self.screen, COLOR_X_OUTLINE,
                             (x + self.cell_size - 10, y + 10), (x + 10, y + self.cell_size - 10), 8)
-            # Собственно крестик
+            
             pygame.draw.line(self.screen, COLOR_X_MAIN,
                             (x + 15, y + 15), (x + self.cell_size - 15, y + self.cell_size - 15), 6)
             pygame.draw.line(self.screen, COLOR_X_MAIN,
                             (x + self.cell_size - 15, y + 15), (x + 15, y + self.cell_size - 15), 6)
         
         elif cell == Player.Type.NAUGHT:
-            # Окантовка нолика
             pygame.draw.circle(self.screen, COLOR_O_OUTLINE,
                             (x + self.cell_size//2, y + self.cell_size//2),
                             self.cell_size//2 - 10, 8)
-            # Собственно нолик
+            
             pygame.draw.circle(self.screen, COLOR_O_MAIN,
                             (x + self.cell_size//2, y + self.cell_size//2),
                             self.cell_size//2 - 13, 6)
 
     def draw_win_line(self):
         if self.win_line:
-            # Анимация длится 0.8 секунды
             progress = min(1.0, (pygame.time.get_ticks() - self.game_over_start_time) / 800)
             start_row, start_col, end_row, end_col = self.win_line
             
-            # Координаты 
             x1 = self.field_x + start_col * self.cell_size + self.cell_size//2
             y1 = self.field_y + start_row * self.cell_size + self.cell_size//2 + PADDING
             x2 = self.field_x + end_col * self.cell_size + self.cell_size//2
@@ -310,7 +340,6 @@ class PyGameInterface:
         
         font = pygame.font.SysFont('Arial', 48, bold=True)
         
-        # Разбиваем сообщение на две строки, чтобы оно не выходило за края при маленьком экране
         lines = self.game_msg.split("!")
         if len(lines) > 1:
             lines = [lines[0] + "!", lines[1]]
@@ -333,9 +362,9 @@ class PyGameInterface:
         self.update_game_state()
         self.update_allowed_click()
 
-    def find_win_line(self): # Нам нужен не просто факт победы (как в солвере). Нужны координаты победной линии
+    def find_win_line(self):
         field = self.game.current_state.field
-        last_move = self.game.current_state.last_move  # Используем геттер из game.py
+        last_move = self.game.current_state.last_move
         
         if not last_move or last_move.row == -1:
             return None
@@ -370,7 +399,6 @@ class PyGameInterface:
             else:
                 break
 
-        # Проверяем длину найденной линии
         if abs(end_r - start_r) + 1 >= Field.STREAK_TO_WIN or abs(end_c - start_c) + 1 >= Field.STREAK_TO_WIN:
             return (start_r, start_c, end_r, end_c)
         
@@ -383,11 +411,11 @@ class PyGameInterface:
         current_m = Field.WIDTH
         current_n = Field.HEIGHT
         current_k = Field.STREAK_TO_WIN
-        current_ai = False  # Можно добавить функционал игры с ИИ
+        current_ai = False
         
         # Запускаем меню
-        menu = StartMenu(m = current_m, n = current_n, k = current_k, ai = current_ai)
-        m, n, k, ai_enabled, mcts_enabled, player_type = menu.run()
+        menu = StartMenu()
+        m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
         
         if m > 0 and n > 0 and k > 0:
             Field.set_dimensions(m, n, k)
@@ -396,5 +424,5 @@ class PyGameInterface:
                 playout_number=MCTS_ITERATIONS,
             )
             game = Game(mcts_player)
-            interface = PyGameInterface(mcts_enabled, player_type, game)
+            interface = PyGameInterface(mcts_enabled, player_type, game, is_fullscreen, screen_size)
             interface.run()

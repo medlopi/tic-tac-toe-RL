@@ -16,7 +16,7 @@ def main():
     try:
         pygame.init()
         menu = StartMenu()
-        m, n, k, ai_enabled, mcts_enabled, player_type = menu.run()
+        m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
         if m > 0 and n > 0 and k > 0:
             Field.set_dimensions(m, n, k)
             mcts_player = MCTSPlayer(
@@ -25,7 +25,7 @@ def main():
             )
             game: Game = Game(mcts_player)
             # game.start_processing_input()
-            interface = PyGameInterface(mcts_enabled, player_type, game)
+            interface = PyGameInterface(mcts_enabled, player_type, game, fullscreen_start=is_fullscreen, initial_size=screen_size)
             interface.run()
         
     except KeyboardInterrupt:

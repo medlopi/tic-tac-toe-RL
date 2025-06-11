@@ -3,7 +3,7 @@ from pygame.locals import *
 from app.player import Player
 
 #TODO не триггериться по скроллу по ячейке
-#TODO 2 потока (mcts тормозит интерфейс при запуске игры)
+#TODO нормальный переход в полноэкранный режим, если стартовое меню было в полноэкранном
 
 class StartMenu:
     def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None):
@@ -35,6 +35,7 @@ class StartMenu:
         self.COLOR_SYMBOL_OFF = (100, 100, 100)
         self.running = True
         self.fullscreen = False
+        self.windowed_size = (self.base_width, self.base_height)
         self.cursor_visible = False
         self.cursor_timer = 0
         self.cursor_blink_interval = 500
@@ -141,6 +142,14 @@ class StartMenu:
             error_surface = self.small_font.render(self.error_message, True, (255, 100, 100))
             self.screen.blit(error_surface, (field_rect.right + 10, field_rect.centery - error_surface.get_height() // 2))
 
+    def toggle_fullscreen(self):
+        self.fullscreen = not self.fullscreen
+        if self.fullscreen:
+            self.windowed_size = self.screen.get_size()
+            self.screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+        else:
+            self.screen = pygame.display.set_mode(self.windowed_size, pygame.RESIZABLE)
+
     def run(self):
         clock = pygame.time.Clock()
         while self.running:
@@ -162,7 +171,7 @@ class StartMenu:
             self.draw()
             clock.tick(30)
         
-        return int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol
+        return (int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol, self.fullscreen, self.screen.get_size())
     
     def validate_k(self, show_message=True):
         try:
@@ -190,6 +199,8 @@ class StartMenu:
             self.running = False
             self.m = self.n = self.k = "0"
         elif event.type == KEYDOWN:
+            if event.key == K_f:
+                self.toggle_fullscreen()
             if event.key == K_ESCAPE:
                 self.running = False
                 self.m = self.n = self.k = "0"
