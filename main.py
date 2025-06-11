@@ -4,36 +4,88 @@ if sys.version_info < (3, 10):
     print("Для работы программы требуется Python 3.10 или выше")
     sys.exit(1)
 
+
+import pygame
 from app.game import Game
-from app.mcts import MCTSPlayer
 from app.start_menu import StartMenu
 from app.interface import PyGameInterface
 from app.game_config import MCTS_ITERATIONS
 from app.field import Field
-import pygame
+from app.mcts_alphazero import MCTSPlayer as MCTS_AZ_Player 
+from app.policy_value_net_torch import PolicyValueNet
+from app.mcts import MCTSPlayer as Pure_MCTS_Player
 
 def main():
+    current_fullscreen_state = False
+    current_screen_size = (800, 600)
+    
+    pygame.init()
     try:
-        pygame.init()
-        menu = StartMenu()
-        m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
-        if m > 0 and n > 0 and k > 0:
-            Field.set_dimensions(m, n, k)
-            mcts_player = MCTSPlayer(
-                puct_constant=5,
-                playout_number=MCTS_ITERATIONS,
+        while True:
+            menu = StartMenu(
+                is_fullscreen_start=current_fullscreen_state,
+                initial_size=current_screen_size
             )
-            game: Game = Game(mcts_player)
-            # game.start_processing_input()
-            interface = PyGameInterface(mcts_enabled, player_type, game, fullscreen_start=is_fullscreen, initial_size=screen_size)
-            interface.run()
+            m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
+
+            if m <= 0 or n <= 0 or k <= 0:
+                print("Выход из игры.")
+                break
+
+            Field.set_dimensions(m, n, k)
+            
+            computer_player = None
+            if mcts_enabled:
+                print("Режим игры: Чистый MCTS")
+                computer_player = Pure_MCTS_Player(
+                    puct_constant=5,
+                    playout_number=MCTS_ITERATIONS,
+                )
+            elif ai_enabled:
+                print("Режим игры: AlphaZero ИИ (с нейросетью)")
+                model_file = f'best_policy_{m}x{n}x{k}.model'
+                print(f"Попытка загрузить модель: {model_file}")
+                
+                try:
+                    policy_value_net = PolicyValueNet(m, n, model_file=model_file)
+                    computer_player = MCTS_AZ_Player(
+                        policy_value_net.policy_value_function,
+                        c_puct=5,
+                        n_playout=MCTS_ITERATIONS,
+                        is_selfplay=False
+                    )
+                except FileNotFoundError:
+                    print(f"ОШИБКА: Файл модели '{model_file}' не найден!")
+                    print("Переключение на чистый MCTS.")
+                    computer_player = Pure_MCTS_Player(
+                        puct_constant=5, playout_number=MCTS_ITERATIONS
+                    )
+                    mcts_enabled = True
+                    ai_enabled = False
+
+            game = Game(computer_player)
+            is_computer_game = mcts_enabled or ai_enabled
+
+            interface = PyGameInterface(
+                mcts_enabled=is_computer_game, 
+                player_type=player_type, 
+                game=game, 
+                fullscreen_start=is_fullscreen, 
+                initial_size=screen_size
+            )
+            current_fullscreen_state = interface.run()
+            current_screen_size = interface.screen_size if hasattr(interface, 'screen_size') else screen_size
         
     except KeyboardInterrupt:
-        print("\n\nProgram stopped!")
-        print("Have a nice day!\n")
+        print("\n\nПрограмма остановлена!")
+        print("Хорошего дня!\n")
     except Exception as e:
-        print("Exception!")
+        print("Произошло исключение!")
         print(e)
+        import traceback
+        traceback.print_exc()
+    finally:
+        pygame.quit()
 
 
 if __name__ == "__main__":

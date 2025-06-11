@@ -132,6 +132,7 @@ class PyGameInterface:
             self.draw()
             pygame.display.flip()
             clock.tick(30)
+        return self.fullscreen
 
     def handle_event(self, event):
         if event.type == QUIT:
@@ -168,6 +169,7 @@ class PyGameInterface:
         else:
             self.screen = pygame.display.set_mode(self.windowed_size, pygame.RESIZABLE)
         self.handle_resize()
+        self.screen_size = self.screen.get_size()
 
     def handle_click(self, pos):
         col = (pos[0] - self.field_x) // self.cell_size
@@ -406,23 +408,6 @@ class PyGameInterface:
     
     def return_to_menu(self):
         self.running = False
-        pygame.quit()
+        self.fullscreen_state = self.fullscreen
+        self.screen_size = self.screen.get_size()
         
-        current_m = Field.WIDTH
-        current_n = Field.HEIGHT
-        current_k = Field.STREAK_TO_WIN
-        current_ai = False
-        
-        # Запускаем меню
-        menu = StartMenu()
-        m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
-        
-        if m > 0 and n > 0 and k > 0:
-            Field.set_dimensions(m, n, k)
-            mcts_player = MCTSPlayer(
-                puct_constant=5,
-                playout_number=MCTS_ITERATIONS,
-            )
-            game = Game(mcts_player)
-            interface = PyGameInterface(mcts_enabled, player_type, game, is_fullscreen, screen_size)
-            interface.run()

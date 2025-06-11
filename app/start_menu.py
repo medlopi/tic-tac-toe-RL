@@ -3,14 +3,17 @@ from pygame.locals import *
 from app.player import Player
 
 #TODO не триггериться по скроллу по ячейке
-#TODO нормальный переход в полноэкранный режим, если стартовое меню было в полноэкранном
+#TODO неюольшой баг при выходе из полноэкранного режима в меню: оно почему-то уходит влево...
 
 class StartMenu:
-    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None):
-        pygame.init()
+    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None):
         self.base_width = 800
         self.base_height = 600
-        self.screen = pygame.display.set_mode((self.base_width, self.base_height), pygame.RESIZABLE)
+        self.fullscreen = is_fullscreen_start
+        self.windowed_size = initial_size if initial_size else (self.base_width, self.base_height)
+        flags = pygame.FULLSCREEN if self.fullscreen else pygame.RESIZABLE
+        size = (0, 0) if self.fullscreen else self.windowed_size
+        self.screen = pygame.display.set_mode(size, flags)
         pygame.display.set_caption("MxNxK Game - Settings")
         self.m = str(m) if m is not None else "3"
         self.n = str(n) if n is not None else "3"
@@ -34,8 +37,6 @@ class StartMenu:
         self.COLOR_SYMBOL_ON = (130, 100, 250)
         self.COLOR_SYMBOL_OFF = (100, 100, 100)
         self.running = True
-        self.fullscreen = False
-        self.windowed_size = (self.base_width, self.base_height)
         self.cursor_visible = False
         self.cursor_timer = 0
         self.cursor_blink_interval = 500
@@ -43,6 +44,7 @@ class StartMenu:
         self.error_timer = 0
         self.error_duration = 1000
         self.error_field = None
+        
 
     def draw(self):
         self.screen.fill(self.COLOR_BG)
@@ -170,6 +172,8 @@ class StartMenu:
             
             self.draw()
             clock.tick(30)
+
+        
         
         return (int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol, self.fullscreen, self.screen.get_size())
     
@@ -195,6 +199,10 @@ class StartMenu:
         return False
     
     def handle_event(self, event):
+        if event.type == VIDEORESIZE:
+            if not self.fullscreen:
+                self.windowed_size = (event.w, event.h)
+                self.screen = pygame.display.set_mode(self.windowed_size, pygame.RESIZABLE)
         if event.type == QUIT:
             self.running = False
             self.m = self.n = self.k = "0"
@@ -296,7 +304,3 @@ class StartMenu:
                         self.running = False
                 except ValueError:
                     pass
-        elif event.type == VIDEORESIZE:
-            if not self.fullscreen:
-                self.base_width, self.base_height = event.w, event.h
-                self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)
