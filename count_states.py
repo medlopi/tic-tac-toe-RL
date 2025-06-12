@@ -212,8 +212,8 @@ def main():
     
     total_cells = width * height
     
-    rough_estimate = math.factorial(width * height)
-    print(f"\nrough estimate [(m * n)!] is {rough_estimate:,}\n")  # красивое форматирование
+    rough_estimate = int(math.pow(3, width * height))
+    print(f"\nrough estimate [3^(m * n)] is {rough_estimate:,}\n")
     
     result = 0
 
