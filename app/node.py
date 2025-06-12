@@ -26,12 +26,15 @@ class Node:
             ] 
             self.free_cells_count: int = Field.WIDTH * Field.HEIGHT
             self.last_move: Field.Cell = Field.Cell()
+            self.available_figures = set(range(1 << Field.COUNT_FEATURES))
         else:
             self.field = copy.deepcopy(parent.field)
             self.field[move.row][move.col] = move.figure
             self.who_moves = Player.Type(abs(parent.who_moves.value - 1))
             self.free_cells_count = parent.free_cells_count - 1
             self.last_move = move
+            self.available_figures = parent.available_figures.copy()
+            self.available_figures.remove(move.figure)
 
     def get_depth(self) -> int:
         """
@@ -80,6 +83,8 @@ class Node:
         shift = count_different_figures * self.who_moves.value
         result = []
         for figure in range(count_different_figures):
+            if (figure + shift) not in self.available_figures:
+                continue
             for i in range(Field.HEIGHT):
                 for j in range(Field.WIDTH):
                     if self.field[i][j] == -1:

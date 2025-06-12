@@ -52,13 +52,17 @@ def get_position_status_and_best_move(current_state: Node) -> tuple[PositionStat
             
             for i in range(count_different_figures): 
                 figure = i + shift
+                if figure not in current_state.available_figures:
+                    continue
                 
                 current_state.field[row][col] = figure
+                current_state.available_figures.remove(figure)
                 current_state.last_move = Field.Cell(row, col, figure)
 
                 next_position_status: PositionStatus = get_position_status_and_best_move(current_state)[0]
 
                 current_state.field[row][col] = -1
+                current_state.available_figures.add(figure)
 
                 if next_position_status == PositionStatus.LOSING_POSITION:
                     analyzed_positions[current_position_hash] = (PositionStatus.WINNING_POSITION, current_state.last_move)

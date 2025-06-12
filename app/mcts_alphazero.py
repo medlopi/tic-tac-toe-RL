@@ -78,8 +78,8 @@ class MCTSPlayer:
         self.mcts.move_and_update(move)
     
     def get_move(self, temperature_contant: float = 1e-3, return_prob: bool = False):
-        count_different_features = 1 << Field.COUNT_FEATURES
-        move_probs = np.zeros(count_different_features*Field.HEIGHT*Field.WIDTH)
+        count_different_figures = 1 << Field.COUNT_FEATURES
+        move_probs = np.zeros(count_different_figures*Field.HEIGHT*Field.WIDTH)
         moves, probs = self.mcts.get_move_probs(temperature_contant)
         moves = [
             cell.figure * Field.WIDTH * Field.HEIGHT + cell.row * Field.WIDTH + cell.col 
