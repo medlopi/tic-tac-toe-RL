@@ -21,14 +21,14 @@ class Node:
 
         if parent is None:
             self.who_moves: Player.Type = Player.Type.CROSS
-            self.field: list[list[Player.Type]] = [
-                [Player.Type.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
+            self.field: list[list[int]] = [
+                [-1 for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
             ] 
             self.free_cells_count: int = Field.WIDTH * Field.HEIGHT
             self.last_move: Field.Cell = Field.Cell()
         else:
             self.field = copy.deepcopy(parent.field)
-            self.field[int(move.row)][int(move.col)] = parent.who_moves
+            self.field[move.row][move.col] = move.figure
             self.who_moves = Player.Type(abs(parent.who_moves.value - 1))
             self.free_cells_count = parent.free_cells_count - 1
             self.last_move = move
@@ -76,11 +76,14 @@ class Node:
         return self._parent is None
     
     def get_available_moves(self) -> list[Field.Cell]:
+        count_different_figures = 1 << (Field.COUNT_FEATURES - 1)
+        shift = count_different_figures * self.who_moves.value
         result = []
         for i in range(Field.HEIGHT):
             for j in range(Field.WIDTH):
-                if self.field[i][j] == Player.Type.NONE:
-                    result.append(Field.Cell(i, j))
+                if self.field[i][j] == -1:
+                    for figure in range(count_different_figures):
+                        result.append(Field.Cell(i, j, figure + shift))
         return result
 
     def check_win(self) -> bool:
@@ -91,27 +94,32 @@ class Node:
         if self.last_move.row == -1:
             return False
         
-        for direction in range(4):
-            count = 1
+        last_move_cell = f'{self.field[self.last_move.row][self.last_move.col]:0{Field.COUNT_FEATURES}b}'
+        
+        for i in range(Field.COUNT_FEATURES):
+        
+            for direction in range(4):
+                count = 1
 
-            for _ in range(2):
-                row = self.last_move.row + DIRECTIONS[direction][0]
-                col = self.last_move.col + DIRECTIONS[direction][1]
+                for _ in range(2):
+                    row = self.last_move.row + DIRECTIONS[direction][0]
+                    col = self.last_move.col + DIRECTIONS[direction][1]
 
-                while (
-                    0 <= row < Field.HEIGHT and
-                    0 <= col < Field.WIDTH and
-                    self.field[row][col] == self.field[self.last_move.row][self.last_move.col]
-                ):
-                    count += 1
-                    row += DIRECTIONS[direction][0]
-                    col += DIRECTIONS[direction][1]
+                    while (
+                        0 <= row < Field.HEIGHT and
+                        0 <= col < Field.WIDTH and
+                        self.field[row][col] != -1 and 
+                        f'{self.field[row][col]:0{Field.COUNT_FEATURES}b}'[i] == last_move_cell[i]
+                    ):
+                        count += 1
+                        row += DIRECTIONS[direction][0]
+                        col += DIRECTIONS[direction][1]
 
-                direction = (direction + 4) % 8
+                    direction = (direction + 4) % 8
 
-            if count >= Field.STREAK_TO_WIN:
-                return True
-            
+                if count >= Field.STREAK_TO_WIN:
+                    return True
+                
         return False
 
     def check_game_state(self) -> GameStates:

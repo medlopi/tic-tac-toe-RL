@@ -40,14 +40,10 @@ class MCTS:
 
     def _run_rollout(self, node: Node) -> int:
         player = node.who_moves
-        winner = Player.Type.NONE
         while True:
             game_state = node.check_game_state()
             if game_state != GameStates.CONTINUE:
-                if game_state == GameStates.CROSS_WON:
-                    winner = Player.Type.CROSS
-                elif game_state == GameStates.NAUGHT_WON:
-                    winner = Player.Type.NAUGHT
+                winner = node.define_winner(game_state)
                 break
              
             action = max(

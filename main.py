@@ -12,28 +12,36 @@ from app.game_config import MCTS_ITERATIONS
 from app.field import Field
 import pygame
 
-def main():
-    try:
-        pygame.init()
-        menu = StartMenu()
-        m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
-        if m > 0 and n > 0 and k > 0:
-            Field.set_dimensions(m, n, k)
-            mcts_player = MCTSPlayer(
-                puct_constant=5,
-                playout_number=MCTS_ITERATIONS,
-            )
-            game: Game = Game(mcts_player)
-            # game.start_processing_input()
-            interface = PyGameInterface(mcts_enabled, player_type, game, fullscreen_start=is_fullscreen, initial_size=screen_size)
-            interface.run()
+def main(): 
+    # Пока нужна консольная версия
+    mcts_player = MCTSPlayer(
+        puct_constant=5,
+        playout_number=MCTS_ITERATIONS,
+    )
+    game: Game = Game(mcts_player)
+    game.start_processing_input()
+
+    # try:
+    #     pygame.init()
+    #     menu = StartMenu()
+    #     m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
+    #     if m > 0 and n > 0 and k > 0:
+    #         Field.set_dimensions(m, n, k)
+    #         mcts_player = MCTSPlayer(
+    #             puct_constant=5,
+    #             playout_number=MCTS_ITERATIONS,
+    #         )
+    #         game: Game = Game(mcts_player)
+    #         # game.start_processing_input()
+    #         interface = PyGameInterface(mcts_enabled, player_type, game, fullscreen_start=is_fullscreen, initial_size=screen_size)
+    #         interface.run()
         
-    except KeyboardInterrupt:
-        print("\n\nProgram stopped!")
-        print("Have a nice day!\n")
-    except Exception as e:
-        print("Exception!")
-        print(e)
+    # except KeyboardInterrupt:
+    #     print("\n\nProgram stopped!")
+    #     print("Have a nice day!\n")
+    # except Exception as e:
+    #     print("Exception!")
+    #     print(e)
 
 
 if __name__ == "__main__":
