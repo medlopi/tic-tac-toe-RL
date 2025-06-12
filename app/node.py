@@ -79,10 +79,10 @@ class Node:
         count_different_figures = 1 << (Field.COUNT_FEATURES - 1)
         shift = count_different_figures * self.who_moves.value
         result = []
-        for i in range(Field.HEIGHT):
-            for j in range(Field.WIDTH):
-                if self.field[i][j] == -1:
-                    for figure in range(count_different_figures):
+        for figure in range(count_different_figures):
+            for i in range(Field.HEIGHT):
+                for j in range(Field.WIDTH):
+                    if self.field[i][j] == -1:
                         result.append(Field.Cell(i, j, figure + shift))
         return result
 
@@ -141,32 +141,39 @@ class Node:
 
     def current_state(self):
         """
-        Возвращает текущее состояние доски в виде np.array формы (4, HEIGHT, WIDTH):
-        0-й канал: клетки текущего игрока (1.0, если занято, иначе 0.0)
-        1-й канал: клетки противника (1.0, если занято, иначе 0.0)
-        2-й канал: последняя сыгранная клетка (1.0 только для последнего хода)
-        3-й канал: чей ход (все заполнено 1.0, если ходит крестик, иначе 0.0)
+        Возвращает текущее состояние доски в виде np.array формы (2*FEATURES+2, HEIGHT, WIDTH):
+        каналы 0-1: клетки текущего игрока и клетки соперника
+        каналы 2-2D-1: по 2 канала на каждое из D-1 свойств
+        канал 2D: последняя сыгранная клетка
+        канал 2D+1: чей ход
         """
-        state = np.zeros((4, Field.HEIGHT, Field.WIDTH), dtype=np.float32)
-        # Определяем тип противника
-        current = self.who_moves
-        opponent = Player.Type(abs(current.value - 1))
+        h, w, d = Field.HEIGHT, Field.WIDTH, Field.COUNT_FEATURES
+        state = np.zeros((2 * d + 2, h, w), dtype=np.float32)
 
-        # Заполняем каналы 0 и 1 (клетки текущего игрока и противника)
-        for i in range(Field.HEIGHT):
-            for j in range(Field.WIDTH):
-                if self.field[i][j] == current:
-                    state[0][i][j] = 1.0
-                elif self.field[i][j] == opponent:
-                    state[1][i][j] = 1.0
+        current = self.who_moves.value
+
+        # Каналы 0, ..., 2D - 1
+        for i in range(h):
+            for j in range(w):
+                figure = self.field[i][j]
+                if figure == -1:
+                    continue
+
+                binary = f'{figure:0{d}b}'
+                shift = (int(binary[0]) != current)
+                state[shift, i, j] = 1.0
+
+                for k in range(1, d):
+                    if int(binary[k]):
+                        state[2 * k + shift, i, j] = 1.0
 
         # Последний ход
-        if self.last_move != Field.Cell(-1, -1):
-            state[2][self.last_move.row][self.last_move.col] = 1.0
+        if self.last_move != Field.Cell():
+            state[2 * d, self.last_move.row, self.last_move.col] = 1.0
 
-        # Канал чей ход
+        # Чей ход
         if self.who_moves == Player.Type.CROSS:
-            state[3][:, :] = 1.0
+            state[2 * d + 1, :, :] = 1.0
 
         return state[:, ::-1, :]
     

@@ -5,16 +5,17 @@ from collections import defaultdict, deque
 from app.game import Game
 from app.mcts_alphazero import MCTSPlayer as MCTS_alphazero_player
 from app.mcts import MCTSPlayer as MCTS_pure_player
-from app.field import CONST_FIELD_HEIGHT, CONST_FIELD_WIDTH, CONST_STREAK_TO_WIN_SIZE
+from app.field import Field
 from app.policy_value_net_torch import PolicyValueNet
 
 
 class TrainPipeline():
     def __init__(self, init_model=None):
         # params of the board and the game
-        self.board_width = CONST_FIELD_WIDTH
-        self.board_height = CONST_FIELD_HEIGHT
-        self.n_in_row = CONST_STREAK_TO_WIN_SIZE
+        self.board_width = Field.WIDTH
+        self.board_height = Field.HEIGHT
+        self.n_in_row = Field.STREAK_TO_WIN
+        self.n_features = Field.COUNT_FEATURES
         
         # training params
         self.learn_rate = 2e-3
@@ -38,11 +39,13 @@ class TrainPipeline():
             # start training from an initial policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height,
+                                                   self.n_features,
                                                    model_file=init_model)
         else:
             # start training from a new policy-value net
             self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height)
+                                                   self.board_height,
+                                                   self.n_features)
         self.mcts_player = MCTS_alphazero_player(
             self.policy_value_net.policy_value_function,
             self.puct_constant,
@@ -56,21 +59,21 @@ class TrainPipeline():
         play_data: [(state, mcts_prob, winner_z), ..., ...]
         """
         extend_data = []
-        for state, mcts_porb, winner in play_data:
-            for i in [1, 2, 3, 4]:
-                # rotate counterclockwise
-                equi_state = np.array([np.rot90(s, i) for s in state])
-                equi_mcts_prob = np.rot90(np.flipud(
-                    mcts_porb.reshape(self.board_height, self.board_width)), i)
-                extend_data.append((equi_state,
-                                    np.flipud(equi_mcts_prob).flatten(),
-                                    winner))
-                # flip horizontally
+        d, h, w = self.n_features, self.board_height, self.board_width
+        count_figures = 1 << d
+
+        for state, mcts_prob, winner in play_data:
+            prob_3d = mcts_prob.reshape(count_figures, h, w)
+
+            for k in [1, 2, 3, 4]:
+                equi_state = np.array([np.rot90(s, k) for s in state])
+                equi_prob  = np.array([np.rot90(p, k) for p in prob_3d])
+                extend_data.append((equi_state, equi_prob.flatten(), winner))
+
                 equi_state = np.array([np.fliplr(s) for s in equi_state])
-                equi_mcts_prob = np.fliplr(equi_mcts_prob)
-                extend_data.append((equi_state,
-                                    np.flipud(equi_mcts_prob).flatten(),
-                                    winner))
+                equi_prob  = np.array([np.fliplr(p) for p in equi_prob])
+                extend_data.append((equi_state, equi_prob.flatten(), winner))
+
         return extend_data
 
     def collect_selfplay_data(self, n_games=1):

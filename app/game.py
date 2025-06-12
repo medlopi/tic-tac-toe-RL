@@ -52,7 +52,7 @@ class Game:
 
             if max(Field.HEIGHT, Field.WIDTH) <= MAX_FIELD_SIZE_FOR_SOLVER:
                 __print_prediction_with_solver()
-            if self.current_state.who_moves == Player.Type.CROSS:
+            if self.current_state.who_moves == Player.Type.NAUGHT:
                 __print_prediction_no_solver()
             print()
 
@@ -256,7 +256,7 @@ Your command is >   """
             __wrong_ceil_chosen()
 
     def make_silent_move(self, cell: Field.Cell) -> None:
-        if self.current_state.field[cell.row][cell.col] == Player.Type.NONE:
+        if self.current_state.field[cell.row][cell.col] == -1:
             state_after_move = Node(
                 parent=self.current_state,
                 move=cell
