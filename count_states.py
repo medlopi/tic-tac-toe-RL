@@ -11,7 +11,16 @@ import random
 import math
 
 
-SIMULATIONS_POWER_FACTOR = 1/2  # степень для расчета количества симуляций
+def parse_fraction(s: str) -> float:
+    try:
+        return float(s)
+    except ValueError:
+        if '/' in s:
+            num, denom = s.split('/')
+
+            return float(num) / float(denom)
+        
+        raise ValueError("error, try to input another float")
 
 
 def count_states_dfs() -> int:
@@ -185,28 +194,11 @@ def check_winning_line_through_move(field: Field, last_move: Field.Cell, streak_
     return False
 
 
-def main():
-    """
-    ratios for different fields (только 1 замер, вероятно, следует сделать больше и усреднить) %:
-
-    3x3x1: 0 (при k=1 dfs посчитал 10 уникальных состояний всегда, алгоритм -- 0, не оч страшно)
-    3x3x2: 79
-    3x3x3: 251
-    3x3x4: 325
-    3x3x5: 325
-
-    4x4x2: 44
-    4x4x3: 232
-    4x4x4: 391
-    4x4x5: 423
-    4x4x6: 423
-
-    5x5x2: 39
-    """
-    
+def main():    
     width = int(input("m >  "))
     height = int(input("n >  "))
     streak = int(input("k >  "))
+    SIMULATIONS_POWER_FACTOR = parse_fraction(input("simulations power factor (0 < float <= 1) >  "))  # степень для расчета количества симуляций
     
     Field.set_dimensions(width, height, streak)
     
@@ -220,6 +212,7 @@ def main():
     for move in range(1, total_cells + 1):  # число сделанных ходов
         simulations_count = max(1, int(math.comb(total_cells, move)**SIMULATIONS_POWER_FACTOR))  # количество рандомно просмотренных полей с move ходами. #TODO поиграться
 
+        visited_nodes_hashes = set()
         is_good = 0
 
         # случайно делаем simulations_count раз move ходов
@@ -227,24 +220,35 @@ def main():
             cur_node = Node()
             cur_player = Player.Type.CROSS
             game_ended = False
+            is_terminal_on_last_move = False
 
-            for _ in range(move):
+            for move_num in range(move):
                 next_move = random.choice(cur_node.get_available_moves())
                 cur_node.field[next_move.row][next_move.col] = cur_player
                 
-                # не закончилась ли игра? если да, то состояние считаем недостижимым
-                if check_winning_line_through_move(cur_node.field, next_move, streak):
-                    game_ended = True
-                    break
+                # проверяем окончание игры только на последнем ходу, чтобы считать is_good и терминальные состояния на нем
+                if move_num == move - 1: 
+                    # если победа на последнем ходу или ничья (все клетки заполнены) - считаем состояние хорошим
+                    if check_winning_line_through_move(cur_node.field, next_move, streak) or move == total_cells:
+                        is_terminal_on_last_move = True
+                else:  # если не последний ход
+                    # если игра закончилась раньше - считаем состояние плохим
+                    if check_winning_line_through_move(cur_node.field, next_move, streak):
+                        game_ended = True
+
+                        break
                     
                 cur_player = Player.Type.NAUGHT if cur_player == Player.Type.CROSS else Player.Type.CROSS
             
-            if not game_ended:
+            # состояние хорошее если игра не закончилась раньше времени ИЛИ закончилась на последнем ходу
+            if hash(cur_node) not in visited_nodes_hashes and (not game_ended or is_terminal_on_last_move):
                 is_good += 1
 
-        possible_states = math.comb(total_cells, move) * (2 ** move)
+            visited_nodes_hashes.add(hash(cur_node))
+
+        possible_states = math.comb(total_cells, move) * (2 ** (move - 1))
         
-        reachable_probability = is_good / simulations_count
+        reachable_probability = is_good / len(visited_nodes_hashes)
         total_nodes = int(possible_states * reachable_probability)
         
         print(f"move {move}: {total_nodes:,} states (is_good: {reachable_probability:.2%})")
