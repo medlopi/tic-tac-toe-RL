@@ -186,6 +186,24 @@ def check_winning_line_through_move(field: Field, last_move: Field.Cell, streak_
 
 
 def main():
+    """
+    ratios for different fields (только 1 замер, вероятно, следует сделать больше и усреднить) %:
+
+    3x3x1: 0 (при k=1 dfs посчитал 10 уникальных состояний всегда, алгоритм -- 0, не оч страшно)
+    3x3x2: 79
+    3x3x3: 251
+    3x3x4: 325
+    3x3x5: 325
+
+    4x4x2: 44
+    4x4x3: 232
+    4x4x4: 391
+    4x4x5: 423
+    4x4x6: 423
+
+    5x5x2: 39
+    """
+    
     width = int(input("m >  "))
     height = int(input("n >  "))
     streak = int(input("k >  "))
@@ -200,7 +218,7 @@ def main():
     result = 0
 
     for move in range(1, total_cells + 1):  # число сделанных ходов
-        simulations_count = max(100, int(math.comb(total_cells, move)**SIMULATIONS_POWER_FACTOR))  # количество рандомно просмотренных полей с move ходами. #TODO поиграться
+        simulations_count = max(1, int(math.comb(total_cells, move)**SIMULATIONS_POWER_FACTOR))  # количество рандомно просмотренных полей с move ходами. #TODO поиграться
 
         is_good = 0
 
@@ -241,7 +259,7 @@ def main():
         
         if exact_states > 0:
             ratio = abs(result / exact_states) * 100
-            print(f"ratio: {ratio:.1f}%")
+            print(f"\nratio: {ratio:.1f}%")
     else:
         print("field is too large for exact calculation! check app/game_config.py please")
 
