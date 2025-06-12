@@ -11,7 +11,7 @@ import random
 import math
 
 
-SIMULATIONS_POWER_FACTOR = 1/50  # степень для расчета количества симуляций
+SIMULATIONS_POWER_FACTOR = 1/2  # степень для расчета количества симуляций
 
 
 def count_states_dfs() -> int:
@@ -240,8 +240,8 @@ def main():
         print(f"exact number of states: {exact_states:,}")
         
         if exact_states > 0:
-            error = abs(result - exact_states) / exact_states * 100
-            print(f"Error: {error:.1f}%")
+            ratio = abs(result / exact_states) * 100
+            print(f"ratio: {ratio:.1f}%")
     else:
         print("field is too large for exact calculation! check app/game_config.py please")
 
