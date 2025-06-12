@@ -8,4 +8,4 @@ CONST_STREAK_TO_WIN_SIZE = 5
 
 
 MCTS_ITERATIONS = 50000
-MAX_FIELD_SIZE_FOR_SOLVER = 6  # наибольшая из сторон не должна превышать этот размер для подключения солвера
+MAX_FIELD_SIZE_FOR_SOLVER = 5  # наибольшая из сторон не должна превышать этот размер для подключения солвера

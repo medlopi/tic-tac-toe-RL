@@ -11,6 +11,9 @@ import random
 import math
 
 
+SIMULATIONS_POWER_FACTOR = 1/50  # степень для расчета количества симуляций
+
+
 def count_states_dfs() -> int:
     """
     Считает число уникальных состояний в дереве игры с помощью dfs
@@ -197,7 +200,7 @@ def main():
     result = 0
 
     for move in range(1, total_cells + 1):  # число сделанных ходов
-        simulations_count = max(100, int(math.sqrt(math.comb(total_cells, move))))  # количество рандомно просмотренных полей с move ходами. #TODO поиграться
+        simulations_count = max(100, int(math.comb(total_cells, move)**SIMULATIONS_POWER_FACTOR))  # количество рандомно просмотренных полей с move ходами. #TODO поиграться
 
         is_good = 0
 
