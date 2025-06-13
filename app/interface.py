@@ -138,24 +138,24 @@ class PyGameInterface:
         if event.type == QUIT:
             self.running = False
             return
-
         if event.type == KEYDOWN:
             if event.key == K_f:
                 self.toggle_fullscreen()
-        
         if event.type == VIDEORESIZE:
             if not self.fullscreen:
                 self.handle_resize()
-
         if event.type == MOUSEBUTTONDOWN:
+            if event.button != 1:
+                return
             menu_button_rect = pygame.Rect(
                 self.screen.get_width() - MENU_BUTTON_WIDTH - 10, 5, MENU_BUTTON_WIDTH, MENU_BUTTON_HEIGHT
             )
             if menu_button_rect.collidepoint(event.pos):
                 self.return_to_menu()
                 return
-
-            if self.allowed_to_click:
+            if self.game_over:
+                self.reset_game()
+            elif self.allowed_to_click:
                 if self.game_over:
                     self.reset_game()
                 else:

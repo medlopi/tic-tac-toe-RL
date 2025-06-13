@@ -2,8 +2,8 @@ import pygame
 from pygame.locals import *
 from app.player import Player
 
-#TODO не триггериться по скроллу по ячейке
-#TODO неюольшой баг при выходе из полноэкранного режима в меню: оно почему-то уходит влево...
+#TODO приближение поля?? (мб сложно)
+#TODO D свойств
 
 class StartMenu:
     def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None):
@@ -247,6 +247,8 @@ class StartMenu:
                         except ValueError:
                             pass
         elif event.type == MOUSEBUTTONDOWN:
+            if event.button != 1:
+                return
             x, y = event.pos
             screen_width, screen_height = self.screen.get_size()
             offset_x = (screen_width - 600) // 2
