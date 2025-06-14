@@ -2,9 +2,6 @@ import pygame
 from pygame.locals import *
 from app.player import Player
 
-#TODO приближение поля?? (мб сложно)
-#TODO D свойств
-
 class StartMenu:
     def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None):
         self.base_width = 800
@@ -20,7 +17,6 @@ class StartMenu:
         self.k = str(k) if k is not None else "3"
         self.ai_enabled = ai if ai is not None else False
         self.mcts_enabled = mcts if mcts is not None else False
-        # По умолчанию включен режим игры с другом
         self.friend_enabled = not (self.ai_enabled or self.mcts_enabled)
         self.player_symbol = player_symbol if player_symbol is not None else Player.Type.CROSS
         self.active_field = None
@@ -32,8 +28,8 @@ class StartMenu:
         self.COLOR_ACTIVE = (120, 120, 150)
         self.COLOR_TEXT = (240, 240, 240)
         self.COLOR_BUTTON = (90, 120, 200)
-        self.COLOR_MODE_ON = (100, 200, 100)  # Зеленый для выбранного режима
-        self.COLOR_MODE_OFF = (200, 100, 100)  # Красный для невыбранных
+        self.COLOR_MODE_ON = (100, 200, 100)
+        self.COLOR_MODE_OFF = (200, 100, 100)
         self.COLOR_SYMBOL_ON = (130, 100, 250)
         self.COLOR_SYMBOL_OFF = (100, 100, 100)
         self.running = True
@@ -44,7 +40,6 @@ class StartMenu:
         self.error_timer = 0
         self.error_duration = 1000
         self.error_field = None
-        
 
     def draw(self):
         self.screen.fill(self.COLOR_BG)
@@ -85,7 +80,6 @@ class StartMenu:
         self.screen.blit(ai_text, (ai_rect.centerx - ai_text.get_width()//2, ai_rect.centery - ai_text.get_height()//2))
         self.screen.blit(mcts_text, (mcts_rect.centerx - mcts_text.get_width()//2, mcts_rect.centery - mcts_text.get_height()//2))
         
-        # Кнопки выбора символа (появляются только если выбран AI или MCTS)
         if self.ai_enabled or self.mcts_enabled:
             symbol_label = self.small_font.render("Choose your side:", True, self.COLOR_TEXT)
             self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, offset_y + 370))
@@ -156,7 +150,6 @@ class StartMenu:
         clock = pygame.time.Clock()
         while self.running:
             current_time = pygame.time.get_ticks()
-            # Обновляем состояние курсора
             if self.active_field is not None:
                 if current_time - self.cursor_timer > self.cursor_blink_interval:
                     self.cursor_visible = not self.cursor_visible
@@ -172,12 +165,11 @@ class StartMenu:
             
             self.draw()
             clock.tick(30)
-
-        
         
         return (int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol, self.fullscreen, self.screen.get_size())
     
     def validate_k(self, show_message=True):
+        """Если k > max(m, n), то уменьшаем k"""
         try:
             if not self.m or not self.n or not self.k:
                 return False
@@ -225,27 +217,13 @@ class StartMenu:
                         self.validate_k(show_message=True)
                 elif event.unicode.isdigit():
                     current = [self.m, self.n, self.k]
-                    if len(current[self.active_field]) < 3:
-                        new_value = current[self.active_field] + event.unicode
-                        try:
-                            new_int_value = int(new_value)
-                            if new_int_value > 30:
-                                # Ограничиваем значение размеров до 30 на 30
-                                current[self.active_field] = "30"
-                                self.error_message = "Max value is 30"
-                                self.error_field = self.active_field
-                                self.error_timer = pygame.time.get_ticks()
-                            else:
-                                current[self.active_field] = new_value
-                            
-                            self.m, self.n, self.k = current
-                            if self.active_field in [0, 1]:
-                                self.validate_k(show_message=False)
-                            elif self.active_field == 2:
-                                self.validate_k(show_message=True)
-                                
-                        except ValueError:
-                            pass
+                    if len(current[self.active_field]) < 2:
+                        current[self.active_field] = current[self.active_field] + event.unicode
+                        self.m, self.n, self.k = current
+                        if self.active_field in [0, 1]:
+                            self.validate_k(show_message=False)
+                        elif self.active_field == 2:
+                            self.validate_k(show_message=True)
         elif event.type == MOUSEBUTTONDOWN:
             if event.button != 1:
                 return
