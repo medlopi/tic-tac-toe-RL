@@ -139,28 +139,29 @@ class PyGameInterface:
                         calculated_move = None
                     calculating_thread = None
 
+            else:
+                if self.need_computer_move and not self.game_over and calculating_thread is None:
+                    def calculate_move():
+                        nonlocal calculated_move
+                        calculated_move = self.game.mcts_player.get_move()
+
+                    calculating_thread = threading.Thread(target=calculate_move, daemon=True)
+                    calculating_thread.start()
+
+                if calculating_thread and not calculating_thread.is_alive():
+                    if calculated_move is not None:
+                        self.game.make_silent_move(calculated_move)
+                        self.game.mcts_player.move_and_update(calculated_move)
+                        self.update_game_state()
+                        self.need_computer_move = False
+                        self.update_allowed_click()
+                        calculated_move = None
+                    calculating_thread = None
+
             current_time = pygame.time.get_ticks()
             if self.game_over and (current_time - self.game_over_start_time) > self.game_over_duration:
                 self.reset_game()
                 self.comp_player.reset_player()
-
-            if self.need_computer_move and not self.game_over and calculating_thread is None:
-                def calculate_move():
-                    nonlocal calculated_move
-                    calculated_move = self.game.mcts_player.get_move()
-
-                calculating_thread = threading.Thread(target=calculate_move, daemon=True)
-                calculating_thread.start()
-
-            if calculating_thread and not calculating_thread.is_alive():
-                if calculated_move is not None:
-                    self.game.make_silent_move(calculated_move)
-                    self.game.mcts_player.move_and_update(calculated_move)
-                    self.update_game_state()
-                    self.need_computer_move = False
-                    self.update_allowed_click()
-                    calculated_move = None
-                calculating_thread = None
 
             self.draw()
             pygame.display.flip()
@@ -204,6 +205,7 @@ class PyGameInterface:
             
             if self.game_over:
                 self.reset_game()
+                self.comp_player.reset_player()
             elif self.allowed_to_click:
                 self.handle_click(event.pos)
 

@@ -93,7 +93,7 @@ def main():
 
 
             game = Game(mcts_player if mcts_player is not None else dqn_player)
-            is_computer_game = mcts_enabled or ai_enabled or mcts_vs_dqn_enabled
+            is_computer_game = mcts_enabled or ai_enabled
 
             interface = PyGameInterface(
                 dqn_player=dqn_player if dqn_player is not None else mcts_player,
