@@ -43,15 +43,15 @@ def main():
                 )
             elif ai_enabled:
                 print("Режим игры: AlphaZero ИИ (с нейросетью)")
-                model_file = f'best_policy_{m}x{n}x{k}.model'
+                model_file = f'policy_{m}x{n}x{k}.model'
                 print(f"Попытка загрузить модель: {model_file}")
                 
                 try:
                     policy_value_net = PolicyValueNet(m, n, model_file=model_file)
                     computer_player = MCTS_AZ_Player(
                         policy_value_net.policy_value_function,
-                        c_puct=5,
-                        n_playout=MCTS_ITERATIONS,
+                        puct_constant=5,
+                        playout_number=MCTS_ITERATIONS,
                         is_selfplay=False
                     )
                 except FileNotFoundError:
