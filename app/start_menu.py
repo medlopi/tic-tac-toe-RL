@@ -5,9 +5,14 @@ from app.player import Player
 class StartMenu:
     def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None):
         self.base_width = 800
-        self.base_height = 600
+        self.base_height = 800 
         self.fullscreen = is_fullscreen_start
-        self.windowed_size = initial_size if initial_size else (self.base_width, self.base_height)
+        if initial_size:
+            final_width = max(self.base_width, initial_size[0])
+            final_height = max(self.base_height, initial_size[1])
+            self.windowed_size = (final_width, final_height)
+        else:
+            self.windowed_size = (self.base_width, self.base_height)
         flags = pygame.FULLSCREEN if self.fullscreen else pygame.RESIZABLE
         size = (0, 0) if self.fullscreen else self.windowed_size
         self.screen = pygame.display.set_mode(size, flags)
@@ -19,8 +24,7 @@ class StartMenu:
         self.mcts_enabled = mcts if mcts is not None else False
         self.friend_enabled = not (self.ai_enabled or self.mcts_enabled)
         self.mcts_vs_dqn_mode = False
-        self.mcts_vs_dqn_choice = None  # None, 'mcts_x', 'dqn_x'
-
+        self.mcts_vs_dqn_choice = None
         self.player_symbol = player_symbol if player_symbol is not None else Player.Type.CROSS
         self.active_field = None
         self.font = pygame.font.SysFont('Arial', 36)
@@ -44,14 +48,45 @@ class StartMenu:
         self.error_duration = 1000
         self.error_field = None
 
-    def draw(self):
-        self.screen.fill(self.COLOR_BG)
+    def get_layout_rects(self):
+        """Вспомогательная функция для получения всех прямоугольников элементов интерфейса."""
         screen_width, screen_height = self.screen.get_size()
-        
         content_width = 600
-        content_height = 550
+        content_height = 700
         offset_x = (screen_width - content_width) // 2
         offset_y = (screen_height - content_height) // 2
+        
+        rects = {}
+
+        rects['m_input'] = pygame.Rect(offset_x + 300, offset_y + 100, 200, 40)
+        rects['n_input'] = pygame.Rect(offset_x + 300, offset_y + 170, 200, 40)
+        rects['k_input'] = pygame.Rect(offset_x + 300, offset_y + 240, 200, 40)
+
+        btn_w, btn_h = 250, 50
+        spacing = 20
+        row1_y = offset_y + 340
+        row2_y = row1_y + btn_h + spacing
+        col1_x = offset_x + (content_width - (btn_w * 2 + spacing)) // 2
+        col2_x = col1_x + btn_w + spacing
+        
+        rects['friend_btn'] = pygame.Rect(col1_x, row1_y, btn_w, btn_h)
+        rects['ai_btn'] = pygame.Rect(col2_x, row1_y, btn_w, btn_h)
+        rects['mcts_btn'] = pygame.Rect(col1_x, row2_y, btn_w, btn_h)
+        rects['mcts_vs_dqn_btn'] = pygame.Rect(col2_x, row2_y, btn_w, btn_h)
+
+        conditional_y = row2_y + btn_h + 80
+        total_width = 190 * 2 + spacing
+        rects['x_btn'] = pygame.Rect(offset_x + (content_width - total_width) // 2, conditional_y, 190, 50)
+        rects['o_btn'] = pygame.Rect(rects['x_btn'].right + spacing, conditional_y, 190, 50)
+        rects['mcts_x_btn'] = pygame.Rect(offset_x + (content_width - total_width) // 2, conditional_y, 190, 50)
+        rects['dqn_x_btn'] = pygame.Rect(rects['mcts_x_btn'].right + spacing, conditional_y, 190, 50)
+        rects['start_btn'] = pygame.Rect(offset_x + 150, conditional_y + 70, 300, 60)
+        
+        return rects, offset_x, offset_y, content_width, content_height
+
+    def draw(self):
+        self.screen.fill(self.COLOR_BG)
+        rects, offset_x, offset_y, content_width, _ = self.get_layout_rects()
         
         title = self.title_font.render("MxNxK Settings", True, self.COLOR_TEXT)
         self.screen.blit(title, (offset_x + (content_width - title.get_width())//2, offset_y + 20))
@@ -60,69 +95,57 @@ class StartMenu:
         self.draw_input("Height (N):", self.n, offset_y + 170, 1, offset_x)
         self.draw_input("Win Streak (K):", self.k, offset_y + 240, 2, offset_x)
         
-        mode_label = self.small_font.render("Play with:", True, self.COLOR_TEXT)
-        self.screen.blit(mode_label, (offset_x + (content_width - mode_label.get_width())//2, offset_y + 280))
+        mode_label = self.small_font.render("Game mode:", True, self.COLOR_TEXT)
+        self.screen.blit(mode_label, (offset_x + (content_width - mode_label.get_width())//2, offset_y + 300))
         
-        friend_rect = pygame.Rect(offset_x + 30, offset_y + 310, 180, 50)
-        ai_rect = pygame.Rect(offset_x + 220, offset_y + 310, 170, 50)
-        mcts_rect = pygame.Rect(offset_x + 400, offset_y + 310, 170, 50)
-        mcts_vs_dqn_rect = pygame.Rect(offset_x + 150, offset_y + 250, 300, 50)
-
         friend_color = self.COLOR_MODE_ON if self.friend_enabled else self.COLOR_MODE_OFF
         ai_color = self.COLOR_MODE_ON if self.ai_enabled else self.COLOR_MODE_OFF
         mcts_color = self.COLOR_MODE_ON if self.mcts_enabled else self.COLOR_MODE_OFF
         mcts_vs_dqn_color = self.COLOR_MODE_ON if self.mcts_vs_dqn_mode else self.COLOR_MODE_OFF
 
-        pygame.draw.rect(self.screen, friend_color, friend_rect, border_radius=10)
-        pygame.draw.rect(self.screen, ai_color, ai_rect, border_radius=10)
-        pygame.draw.rect(self.screen, mcts_color, mcts_rect, border_radius=10)
-        pygame.draw.rect(self.screen, mcts_vs_dqn_color, mcts_vs_dqn_rect, border_radius=10)
+        pygame.draw.rect(self.screen, friend_color, rects['friend_btn'], border_radius=10)
+        pygame.draw.rect(self.screen, ai_color, rects['ai_btn'], border_radius=10)
+        pygame.draw.rect(self.screen, mcts_color, rects['mcts_btn'], border_radius=10)
+        pygame.draw.rect(self.screen, mcts_vs_dqn_color, rects['mcts_vs_dqn_btn'], border_radius=10)
         
-        friend_text = self.font.render("Friend", True, self.COLOR_TEXT)
-        ai_text = self.font.render("AI", True, self.COLOR_TEXT)
-        mcts_text = self.font.render("MCTS", True, self.COLOR_TEXT)
+        friend_text = self.font.render("VS Friend", True, self.COLOR_TEXT)
+        ai_text = self.font.render("VS DQN AI", True, self.COLOR_TEXT)
+        mcts_text = self.font.render("VS MCTS AI", True, self.COLOR_TEXT)
         mcts_vs_dqn_text = self.font.render("MCTS vs DQN", True, self.COLOR_TEXT)
 
-        self.screen.blit(friend_text, (friend_rect.centerx - friend_text.get_width()//2, friend_rect.centery - friend_text.get_height()//2))
-        self.screen.blit(ai_text, (ai_rect.centerx - ai_text.get_width()//2, ai_rect.centery - ai_text.get_height()//2))
-        self.screen.blit(mcts_text, (mcts_rect.centerx - mcts_text.get_width()//2, mcts_rect.centery - mcts_text.get_height()//2))
-        self.screen.blit(mcts_vs_dqn_text, (
-            mcts_vs_dqn_rect.centerx - mcts_vs_dqn_text.get_width() // 2,
-            mcts_vs_dqn_rect.centery - mcts_vs_dqn_text.get_height() // 2
-        ))
+        self.screen.blit(friend_text, (rects['friend_btn'].centerx - friend_text.get_width()//2, rects['friend_btn'].centery - friend_text.get_height()//2))
+        self.screen.blit(ai_text, (rects['ai_btn'].centerx - ai_text.get_width()//2, rects['ai_btn'].centery - ai_text.get_height()//2))
+        self.screen.blit(mcts_text, (rects['mcts_btn'].centerx - mcts_text.get_width()//2, rects['mcts_btn'].centery - mcts_text.get_height()//2))
+        self.screen.blit(mcts_vs_dqn_text, (rects['mcts_vs_dqn_btn'].centerx - mcts_vs_dqn_text.get_width() // 2, rects['mcts_vs_dqn_btn'].centery - mcts_vs_dqn_text.get_height() // 2))
 
+        conditional_label_y = rects['mcts_btn'].bottom + 30
         if self.ai_enabled or self.mcts_enabled:
             symbol_label = self.small_font.render("Choose your side:", True, self.COLOR_TEXT)
-            self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, offset_y + 370))
+            self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, conditional_label_y))
             
-            button_spacing = 20
-            total_width = 190 * 2 + button_spacing  
-            x_rect = pygame.Rect(offset_x + (content_width - total_width) // 2, offset_y + 400, 190, 50)
-            o_rect = pygame.Rect(offset_x + (content_width - total_width) // 2 + 190 + button_spacing, offset_y + 400, 190, 50)
             x_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.CROSS else self.COLOR_SYMBOL_OFF
             o_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.NAUGHT else self.COLOR_SYMBOL_OFF
-            pygame.draw.rect(self.screen, x_color, x_rect, border_radius=10)
-            pygame.draw.rect(self.screen, o_color, o_rect, border_radius=10)
+            pygame.draw.rect(self.screen, x_color, rects['x_btn'], border_radius=10)
+            pygame.draw.rect(self.screen, o_color, rects['o_btn'], border_radius=10)
             x_text = self.font.render("Play as X", True, self.COLOR_TEXT)
             o_text = self.font.render("Play as O", True, self.COLOR_TEXT)
-            self.screen.blit(x_text, (x_rect.centerx - x_text.get_width()//2, x_rect.centery - x_text.get_height()//2))
-            self.screen.blit(o_text, (o_rect.centerx - o_text.get_width()//2, o_rect.centery - o_text.get_height()//2))
+            self.screen.blit(x_text, (rects['x_btn'].centerx - x_text.get_width()//2, rects['x_btn'].centery - x_text.get_height()//2))
+            self.screen.blit(o_text, (rects['o_btn'].centerx - o_text.get_width()//2, rects['o_btn'].centery - o_text.get_height()//2))
         
         if self.mcts_vs_dqn_mode:
-            # Показываем две кнопки выбора
-            btn1_rect = pygame.Rect(offset_x + 150, offset_y + 400, 190, 50)
-            btn2_rect = pygame.Rect(offset_x + 330, offset_y + 400, 190, 50)
+            choice_label = self.small_font.render("Who plays as X (first move)?", True, self.COLOR_TEXT)
+            self.screen.blit(choice_label, (offset_x + (content_width - choice_label.get_width())//2, conditional_label_y))
+            
             btn1_color = self.COLOR_SYMBOL_ON if self.mcts_vs_dqn_choice == 'mcts_x' else self.COLOR_SYMBOL_OFF
             btn2_color = self.COLOR_SYMBOL_ON if self.mcts_vs_dqn_choice == 'dqn_x' else self.COLOR_SYMBOL_OFF
-            pygame.draw.rect(self.screen, btn1_color, btn1_rect, border_radius=10)
-            pygame.draw.rect(self.screen, btn2_color, btn2_rect, border_radius=10)
+            pygame.draw.rect(self.screen, btn1_color, rects['mcts_x_btn'], border_radius=10)
+            pygame.draw.rect(self.screen, btn2_color, rects['dqn_x_btn'], border_radius=10)
             btn1_text = self.font.render("MCTS as X", True, self.COLOR_TEXT)
             btn2_text = self.font.render("DQN as X", True, self.COLOR_TEXT)
-            self.screen.blit(btn1_text, (btn1_rect.centerx - btn1_text.get_width()//2, btn1_rect.centery - btn1_text.get_height()//2))
-            self.screen.blit(btn2_text, (btn2_rect.centerx - btn2_text.get_width()//2, btn2_rect.centery - btn2_text.get_height()//2))
+            self.screen.blit(btn1_text, (rects['mcts_x_btn'].centerx - btn1_text.get_width()//2, rects['mcts_x_btn'].centery - btn1_text.get_height()//2))
+            self.screen.blit(btn2_text, (rects['dqn_x_btn'].centerx - btn2_text.get_width()//2, rects['dqn_x_btn'].centery - btn2_text.get_height()//2))
         
-        
-        start_rect = pygame.Rect(offset_x + 150, offset_y + 470, 300, 60)
+        start_rect = rects['start_btn']
         pygame.draw.rect(self.screen, self.COLOR_BUTTON, start_rect, border_radius=10)
         start_text = self.title_font.render("START", True, self.COLOR_TEXT)
         self.screen.blit(start_text, (start_rect.centerx - start_text.get_width() // 2, start_rect.centery - start_text.get_height()//2))
@@ -252,68 +275,56 @@ class StartMenu:
         elif event.type == MOUSEBUTTONDOWN:
             if event.button != 1:
                 return
-            x, y = event.pos
-            screen_width, screen_height = self.screen.get_size()
-            offset_x = (screen_width - 600) // 2
-            offset_y = (screen_height - 550) // 2
+            
+            # Получаем актуальные координаты всех кнопок
+            rects, _, _, _, _ = self.get_layout_rects()
             
             # Проверка полей ввода
-            for i in range(3):
-                field_y = offset_y + 100 + i*70
-                if (offset_x + 300 <= x <= offset_x + 500 and 
-                    field_y <= y <= field_y + 40):
-                    self.active_field = i
-                    break
-            else:
-                old_active = self.active_field
-                self.active_field = None
-                if old_active is not None:
-                    self.validate_k(show_message=True)
+            self.active_field = None
+            if rects['m_input'].collidepoint(event.pos):
+                self.active_field = 0
+            elif rects['n_input'].collidepoint(event.pos):
+                self.active_field = 1
+            elif rects['k_input'].collidepoint(event.pos):
+                self.active_field = 2
             
-            if (offset_x + 30 <= x <= offset_x + 210 and 
-                offset_y + 310 <= y <= offset_y + 360):
+            if rects['friend_btn'].collidepoint(event.pos):
                 self.friend_enabled = True
                 self.ai_enabled = False
                 self.mcts_enabled = False
                 self.mcts_vs_dqn_mode = False
 
-            if (offset_x + 220 <= x <= offset_x + 390 and 
-                offset_y + 310 <= y <= offset_y + 360):
+            if rects['ai_btn'].collidepoint(event.pos):
                 self.ai_enabled = True
                 self.friend_enabled = False
                 self.mcts_enabled = False
                 self.mcts_vs_dqn_mode = False
 
-            if (offset_x + 400 <= x <= offset_x + 570 and 
-                offset_y + 310 <= y <= offset_y + 360):
+            if rects['mcts_btn'].collidepoint(event.pos):
                 self.mcts_enabled = True
                 self.friend_enabled = False
                 self.ai_enabled = False
                 self.mcts_vs_dqn_mode = False
-            if (offset_x + 150 <= x <= offset_x + 450 and offset_y + 250 <= y <= offset_y + 300):
+            
+            if rects['mcts_vs_dqn_btn'].collidepoint(event.pos):
                 self.mcts_vs_dqn_mode = True
                 self.friend_enabled = False
                 self.ai_enabled = False
                 self.mcts_enabled = False
             
             if self.ai_enabled or self.mcts_enabled:
-                if (offset_x + 150 <= x <= offset_x + 270 and 
-                    offset_y + 400 <= y <= offset_y + 450):
+                if rects['x_btn'].collidepoint(event.pos):
                     self.player_symbol = Player.Type.CROSS
-                if (offset_x + 330 <= x <= offset_x + 450 and 
-                    offset_y + 400 <= y <= offset_y + 450):
+                if rects['o_btn'].collidepoint(event.pos):
                     self.player_symbol = Player.Type.NAUGHT
 
             if self.mcts_vs_dqn_mode:
-                # "MCTS as X"
-                if (offset_x + 150 <= x <= offset_x + 340 and offset_y + 400 <= y <= offset_y + 450):
+                if rects['mcts_x_btn'].collidepoint(event.pos):
                     self.mcts_vs_dqn_choice = 'mcts_x'
-                # "DQN as X"
-                if (offset_x + 330 <= x <= offset_x + 520 and offset_y + 400 <= y <= offset_y + 450):
+                if rects['dqn_x_btn'].collidepoint(event.pos):
                     self.mcts_vs_dqn_choice = 'dqn_x'
                     
-            if (offset_x + 150 <= x <= offset_x + 450 and 
-                offset_y + 470 <= y <= offset_y + 530):
+            if rects['start_btn'].collidepoint(event.pos):
                 try:
                     if not self.m or not self.n or not self.k:
                         return
@@ -322,6 +333,9 @@ class StartMenu:
                     k = int(self.k)
                     if m > 0 and n > 0 and k > 0:
                         self.validate_k(show_message=True)
-                        self.running = False
+                        if self.mcts_vs_dqn_mode and self.mcts_vs_dqn_choice is None:
+                            pass
+                        else:
+                            self.running = False
                 except ValueError:
                     pass
