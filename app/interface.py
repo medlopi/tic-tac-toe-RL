@@ -27,7 +27,7 @@ MENU_BUTTON_WIDTH = 100
 MENU_BUTTON_HEIGHT = STATUS_HEIGHT - 10
 
 class PyGameInterface:
-    def __init__(self, mcts_enabled : bool, player_type : Player.Type, game=None, fullscreen_start=False, initial_size=None):
+    def __init__(self,dqn_player, mcts_enabled : bool, player_type : Player.Type, game=None, fullscreen_start=False, initial_size=None, mcts_vs_dqn=False, mcts_vs_dqn_choice='mcts_x'):
         self.game = game if game else Game()
         self.running = True
         self.game_over = False
@@ -40,8 +40,14 @@ class PyGameInterface:
         self.game_over_duration = 3000
         self.game_msg = "Game in progress"
         self.mcts_enabled = mcts_enabled
+        self.comp_player = dqn_player
+        self.mcts_vs_dqn = mcts_vs_dqn
         self.player_type = player_type
+        self.mcts_vs_dqn_choice = mcts_vs_dqn_choice
         self.need_computer_move = True if (mcts_enabled and player_type == Player.Type.NAUGHT) else False
+        self.dqn_vs_mcts_thread = None
+        self.dqn_vs_mcts_move = None
+
         self.allowed_to_click = False 
         self.update_allowed_click() 
         self.zoom = 1.0
@@ -98,9 +104,45 @@ class PyGameInterface:
             for event in pygame.event.get():
                 self.handle_event(event)
             
+            if self.mcts_vs_dqn:
+                current_time = pygame.time.get_ticks()
+                if self.game_over and (current_time - self.game_over_start_time) > self.game_over_duration:
+                    self.reset_game()
+                    self.comp_player.reset_player()
+
+                who_moves = self.game.current_state.who_moves
+
+                if not self.game_over and calculating_thread is None:
+                    def calculate_move():
+                        nonlocal calculated_move
+                        if who_moves == Player.Type.CROSS:
+                            if self.mcts_vs_dqn_choice == 'mcts_x':
+                                calculated_move = self.game.mcts_player.get_move()
+                            else:
+                                calculated_move = self.comp_player.get_move()
+                        elif who_moves == Player.Type.NAUGHT:
+                            if self.mcts_vs_dqn_choice == 'dqn_x':
+                                calculated_move = self.game.mcts_player.get_move()
+                            else:
+                                calculated_move = self.comp_player.get_move()
+                    calculating_thread = threading.Thread(target=calculate_move, daemon=True)
+                    calculating_thread.start()
+
+                if calculating_thread and not calculating_thread.is_alive():
+                    if calculated_move is not None:
+                        self.game.make_silent_move(calculated_move)
+
+                        self.comp_player.move_and_update(calculated_move)
+                        self.game.mcts_player.move_and_update(calculated_move)
+                        
+                        self.update_game_state()
+                        calculated_move = None
+                    calculating_thread = None
+
             current_time = pygame.time.get_ticks()
             if self.game_over and (current_time - self.game_over_start_time) > self.game_over_duration:
                 self.reset_game()
+                self.comp_player.reset_player()
 
             if self.need_computer_move and not self.game_over and calculating_thread is None:
                 def calculate_move():

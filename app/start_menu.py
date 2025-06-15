@@ -18,6 +18,9 @@ class StartMenu:
         self.ai_enabled = ai if ai is not None else False
         self.mcts_enabled = mcts if mcts is not None else False
         self.friend_enabled = not (self.ai_enabled or self.mcts_enabled)
+        self.mcts_vs_dqn_mode = False
+        self.mcts_vs_dqn_choice = None  # None, 'mcts_x', 'dqn_x'
+
         self.player_symbol = player_symbol if player_symbol is not None else Player.Type.CROSS
         self.active_field = None
         self.font = pygame.font.SysFont('Arial', 36)
@@ -63,23 +66,31 @@ class StartMenu:
         friend_rect = pygame.Rect(offset_x + 30, offset_y + 310, 180, 50)
         ai_rect = pygame.Rect(offset_x + 220, offset_y + 310, 170, 50)
         mcts_rect = pygame.Rect(offset_x + 400, offset_y + 310, 170, 50)
-        
+        mcts_vs_dqn_rect = pygame.Rect(offset_x + 150, offset_y + 250, 300, 50)
+
         friend_color = self.COLOR_MODE_ON if self.friend_enabled else self.COLOR_MODE_OFF
         ai_color = self.COLOR_MODE_ON if self.ai_enabled else self.COLOR_MODE_OFF
         mcts_color = self.COLOR_MODE_ON if self.mcts_enabled else self.COLOR_MODE_OFF
-        
+        mcts_vs_dqn_color = self.COLOR_MODE_ON if self.mcts_vs_dqn_mode else self.COLOR_MODE_OFF
+
         pygame.draw.rect(self.screen, friend_color, friend_rect, border_radius=10)
         pygame.draw.rect(self.screen, ai_color, ai_rect, border_radius=10)
         pygame.draw.rect(self.screen, mcts_color, mcts_rect, border_radius=10)
+        pygame.draw.rect(self.screen, mcts_vs_dqn_color, mcts_vs_dqn_rect, border_radius=10)
         
         friend_text = self.font.render("Friend", True, self.COLOR_TEXT)
         ai_text = self.font.render("AI", True, self.COLOR_TEXT)
         mcts_text = self.font.render("MCTS", True, self.COLOR_TEXT)
-        
+        mcts_vs_dqn_text = self.font.render("MCTS vs DQN", True, self.COLOR_TEXT)
+
         self.screen.blit(friend_text, (friend_rect.centerx - friend_text.get_width()//2, friend_rect.centery - friend_text.get_height()//2))
         self.screen.blit(ai_text, (ai_rect.centerx - ai_text.get_width()//2, ai_rect.centery - ai_text.get_height()//2))
         self.screen.blit(mcts_text, (mcts_rect.centerx - mcts_text.get_width()//2, mcts_rect.centery - mcts_text.get_height()//2))
-        
+        self.screen.blit(mcts_vs_dqn_text, (
+            mcts_vs_dqn_rect.centerx - mcts_vs_dqn_text.get_width() // 2,
+            mcts_vs_dqn_rect.centery - mcts_vs_dqn_text.get_height() // 2
+        ))
+
         if self.ai_enabled or self.mcts_enabled:
             symbol_label = self.small_font.render("Choose your side:", True, self.COLOR_TEXT)
             self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, offset_y + 370))
@@ -96,6 +107,20 @@ class StartMenu:
             o_text = self.font.render("Play as O", True, self.COLOR_TEXT)
             self.screen.blit(x_text, (x_rect.centerx - x_text.get_width()//2, x_rect.centery - x_text.get_height()//2))
             self.screen.blit(o_text, (o_rect.centerx - o_text.get_width()//2, o_rect.centery - o_text.get_height()//2))
+        
+        if self.mcts_vs_dqn_mode:
+            # Показываем две кнопки выбора
+            btn1_rect = pygame.Rect(offset_x + 150, offset_y + 400, 190, 50)
+            btn2_rect = pygame.Rect(offset_x + 330, offset_y + 400, 190, 50)
+            btn1_color = self.COLOR_SYMBOL_ON if self.mcts_vs_dqn_choice == 'mcts_x' else self.COLOR_SYMBOL_OFF
+            btn2_color = self.COLOR_SYMBOL_ON if self.mcts_vs_dqn_choice == 'dqn_x' else self.COLOR_SYMBOL_OFF
+            pygame.draw.rect(self.screen, btn1_color, btn1_rect, border_radius=10)
+            pygame.draw.rect(self.screen, btn2_color, btn2_rect, border_radius=10)
+            btn1_text = self.font.render("MCTS as X", True, self.COLOR_TEXT)
+            btn2_text = self.font.render("DQN as X", True, self.COLOR_TEXT)
+            self.screen.blit(btn1_text, (btn1_rect.centerx - btn1_text.get_width()//2, btn1_rect.centery - btn1_text.get_height()//2))
+            self.screen.blit(btn2_text, (btn2_rect.centerx - btn2_text.get_width()//2, btn2_rect.centery - btn2_text.get_height()//2))
+        
         
         start_rect = pygame.Rect(offset_x + 150, offset_y + 470, 300, 60)
         pygame.draw.rect(self.screen, self.COLOR_BUTTON, start_rect, border_radius=10)
@@ -166,7 +191,7 @@ class StartMenu:
             self.draw()
             clock.tick(30)
         
-        return (int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol, self.fullscreen, self.screen.get_size())
+        return (int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.mcts_vs_dqn_mode, self.mcts_vs_dqn_choice, self.player_symbol, self.fullscreen, self.screen.get_size())
     
     def validate_k(self, show_message=True):
         """Если k > max(m, n), то уменьшаем k"""
@@ -250,18 +275,26 @@ class StartMenu:
                 self.friend_enabled = True
                 self.ai_enabled = False
                 self.mcts_enabled = False
+                self.mcts_vs_dqn_mode = False
 
             if (offset_x + 220 <= x <= offset_x + 390 and 
                 offset_y + 310 <= y <= offset_y + 360):
                 self.ai_enabled = True
                 self.friend_enabled = False
                 self.mcts_enabled = False
+                self.mcts_vs_dqn_mode = False
 
             if (offset_x + 400 <= x <= offset_x + 570 and 
                 offset_y + 310 <= y <= offset_y + 360):
                 self.mcts_enabled = True
                 self.friend_enabled = False
                 self.ai_enabled = False
+                self.mcts_vs_dqn_mode = False
+            if (offset_x + 150 <= x <= offset_x + 450 and offset_y + 250 <= y <= offset_y + 300):
+                self.mcts_vs_dqn_mode = True
+                self.friend_enabled = False
+                self.ai_enabled = False
+                self.mcts_enabled = False
             
             if self.ai_enabled or self.mcts_enabled:
                 if (offset_x + 150 <= x <= offset_x + 270 and 
@@ -270,7 +303,15 @@ class StartMenu:
                 if (offset_x + 330 <= x <= offset_x + 450 and 
                     offset_y + 400 <= y <= offset_y + 450):
                     self.player_symbol = Player.Type.NAUGHT
-            
+
+            if self.mcts_vs_dqn_mode:
+                # "MCTS as X"
+                if (offset_x + 150 <= x <= offset_x + 340 and offset_y + 400 <= y <= offset_y + 450):
+                    self.mcts_vs_dqn_choice = 'mcts_x'
+                # "DQN as X"
+                if (offset_x + 330 <= x <= offset_x + 520 and offset_y + 400 <= y <= offset_y + 450):
+                    self.mcts_vs_dqn_choice = 'dqn_x'
+                    
             if (offset_x + 150 <= x <= offset_x + 450 and 
                 offset_y + 470 <= y <= offset_y + 530):
                 try:

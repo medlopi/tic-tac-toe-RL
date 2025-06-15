@@ -9,7 +9,6 @@ import pygame
 from app.game import Game
 from app.start_menu import StartMenu
 from app.interface import PyGameInterface
-from app.game_config import MCTS_ITERATIONS
 from app.field import Field
 from app.mcts_alphazero import MCTSPlayer as MCTS_AZ_Player 
 from app.policy_value_net_torch import PolicyValueNet
@@ -26,18 +25,18 @@ def main():
                 is_fullscreen_start=current_fullscreen_state,
                 initial_size=current_screen_size
             )
-            m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
+            m, n, k, ai_enabled, mcts_enabled, mcts_vs_dqn_enabled, mcts_vs_dqn_choice, player_type, is_fullscreen, screen_size = menu.run()
 
             if m <= 0 or n <= 0 or k <= 0:
                 print("Выход из игры.")
                 break
 
             Field.set_dimensions(m, n, k)
-            
-            computer_player = None
+            dqn_player = None
+            mcts_player = None
             if mcts_enabled:
                 print("Режим игры: Чистый MCTS")
-                computer_player = Pure_MCTS_Player(
+                mcts_player = Pure_MCTS_Player(
                     puct_constant=5,
                     playout_number=MCTS_ITERATIONS,
                 )
@@ -48,30 +47,63 @@ def main():
                 
                 try:
                     policy_value_net = PolicyValueNet(m, n, model_file=model_file)
-                    computer_player = MCTS_AZ_Player(
+                    dqn_player = MCTS_AZ_Player(
                         policy_value_net.policy_value_function,
                         puct_constant=5,
-                        playout_number=MCTS_ITERATIONS,
+                        playout_number=1000,
                         is_selfplay=False
                     )
                 except FileNotFoundError:
                     print(f"ОШИБКА: Файл модели '{model_file}' не найден!")
                     print("Переключение на чистый MCTS.")
-                    computer_player = Pure_MCTS_Player(
-                        puct_constant=5, playout_number=MCTS_ITERATIONS
+                    mcts_player = Pure_MCTS_Player(
+                        puct_constant=5, 
+                        playout_number=1000
                     )
                     mcts_enabled = True
                     ai_enabled = False
 
-            game = Game(computer_player)
-            is_computer_game = mcts_enabled or ai_enabled
+            elif mcts_vs_dqn_enabled:
+                print("Режим игры: MCTS vs DQN")
+                mcts_player = Pure_MCTS_Player(
+                    puct_constant=5,
+                    playout_number=1000,
+                )
+        
+                model_file = f'policy_{m}x{n}x{k}.model'
+                print(f"Попытка загрузить модель: {model_file}")
+                
+                try:
+                    policy_value_net = PolicyValueNet(m, n, model_file=model_file)
+                    dqn_player = MCTS_AZ_Player(
+                        policy_value_net.policy_value_function,
+                        puct_constant=5,
+                        playout_number=1000,
+                        is_selfplay=False
+                    )
+                except FileNotFoundError:
+                    print(f"ОШИБКА: Файл модели '{model_file}' не найден!")
+                    print("Переключение на чистый MCTS.")
+                    mcts_player = Pure_MCTS_Player(
+                        puct_constant=5, 
+                        playout_number=1000
+                    )
+                    mcts_enabled = False
+                    ai_enabled = False
+
+
+            game = Game(mcts_player if mcts_player is not None else dqn_player)
+            is_computer_game = mcts_enabled or ai_enabled or mcts_vs_dqn_enabled
 
             interface = PyGameInterface(
+                dqn_player=dqn_player if dqn_player is not None else mcts_player,
                 mcts_enabled=is_computer_game, 
                 player_type=player_type, 
                 game=game, 
                 fullscreen_start=is_fullscreen, 
-                initial_size=screen_size
+                initial_size=screen_size,
+                mcts_vs_dqn=mcts_vs_dqn_enabled,
+                mcts_vs_dqn_choice=mcts_vs_dqn_choice
             )
             current_fullscreen_state = interface.run()
             current_screen_size = interface.screen_size if hasattr(interface, 'screen_size') else screen_size
