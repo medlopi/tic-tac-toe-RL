@@ -13,6 +13,7 @@ from app.field import Field
 from app.mcts_alphazero import MCTSPlayer as MCTS_AZ_Player 
 from app.policy_value_net_torch import PolicyValueNet
 from app.mcts import MCTSPlayer as Pure_MCTS_Player
+from app.game_config import MCTS_ITERATIONS
 
 def main():
     current_fullscreen_state = False
@@ -34,6 +35,7 @@ def main():
             Field.set_dimensions(m, n, k)
             dqn_player = None
             mcts_player = None
+            
             if mcts_enabled:
                 print("Режим игры: Чистый MCTS")
                 mcts_player = Pure_MCTS_Player(

@@ -78,6 +78,10 @@ class PyGameInterface:
         self.handle_resize()
 
     def update_allowed_click(self):
+        if self.mcts_vs_dqn:
+            self.allowed_to_click = False
+            return
+        
         if self.mcts_enabled:
             self.allowed_to_click = (self.game.current_state.who_moves == self.player_type)
             self.need_computer_move = (self.game.current_state.who_moves != self.player_type)
