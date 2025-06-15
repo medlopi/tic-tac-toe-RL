@@ -9,7 +9,7 @@ import pygame
 from app.game import Game
 from app.start_menu import StartMenu
 from app.interface import PyGameInterface
-from app.game_config import MCTS_ITERATIONS
+from app.game_config import MCTS_ITERATIONS, MCTS_AZ_ITERATIONS
 from app.field import Field
 from app.mcts_alphazero import MCTSPlayer as MCTS_AZ_Player 
 from app.policy_value_net_torch import PolicyValueNet
@@ -26,13 +26,13 @@ def main():
                 is_fullscreen_start=current_fullscreen_state,
                 initial_size=current_screen_size
             )
-            m, n, k, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
+            m, n, k, d, ai_enabled, mcts_enabled, player_type, is_fullscreen, screen_size = menu.run()
 
-            if m <= 0 or n <= 0 or k <= 0:
+            if m <= 0 or n <= 0 or k <= 0 or d <= 0:
                 print("Выход из игры.")
                 break
 
-            Field.set_dimensions(m, n, k)
+            Field.set_dimensions(m, n, k, d)
             
             computer_player = None
             if mcts_enabled:
@@ -43,15 +43,15 @@ def main():
                 )
             elif ai_enabled:
                 print("Режим игры: AlphaZero ИИ (с нейросетью)")
-                model_file = f'policy_{m}x{n}x{k}.model'
+                model_file = f'policy_{m}x{n}x{k}x{d}.model'
                 print(f"Попытка загрузить модель: {model_file}")
                 
                 try:
-                    policy_value_net = PolicyValueNet(m, n, model_file=model_file)
+                    policy_value_net = PolicyValueNet(m, n, d, model_file=model_file)
                     computer_player = MCTS_AZ_Player(
                         policy_value_net.policy_value_function,
                         puct_constant=5,
-                        playout_number=MCTS_ITERATIONS,
+                        playout_number=MCTS_AZ_ITERATIONS,
                         is_selfplay=False
                     )
                 except FileNotFoundError:

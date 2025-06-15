@@ -3,7 +3,7 @@ from pygame.locals import *
 from app.player import Player
 
 class StartMenu:
-    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None):
+    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None, d=None):
         self.base_width = 800
         self.base_height = 600
         self.fullscreen = is_fullscreen_start
@@ -12,9 +12,10 @@ class StartMenu:
         size = (0, 0) if self.fullscreen else self.windowed_size
         self.screen = pygame.display.set_mode(size, flags)
         pygame.display.set_caption("MxNxK Game - Settings")
-        self.m = str(m) if m is not None else "3"
-        self.n = str(n) if n is not None else "3"
-        self.k = str(k) if k is not None else "3"
+        self.m = str(m) if m is not None else "4"
+        self.n = str(n) if n is not None else "4"
+        self.k = str(k) if k is not None else "4"
+        self.d = str(d) if d is not None else "4"
         self.ai_enabled = ai if ai is not None else False
         self.mcts_enabled = mcts if mcts is not None else False
         self.friend_enabled = not (self.ai_enabled or self.mcts_enabled)
@@ -46,7 +47,7 @@ class StartMenu:
         screen_width, screen_height = self.screen.get_size()
         
         content_width = 600
-        content_height = 550
+        content_height = 650
         offset_x = (screen_width - content_width) // 2
         offset_y = (screen_height - content_height) // 2
         
@@ -56,14 +57,13 @@ class StartMenu:
         self.draw_input("Width (M):", self.m, offset_y + 100, 0, offset_x)
         self.draw_input("Height (N):", self.n, offset_y + 170, 1, offset_x)
         self.draw_input("Win Streak (K):", self.k, offset_y + 240, 2, offset_x)
-        
+        self.draw_input("Features (D):", self.d, offset_y + 310, 3, offset_x)
+
         mode_label = self.small_font.render("Play with:", True, self.COLOR_TEXT)
-        self.screen.blit(mode_label, (offset_x + (content_width - mode_label.get_width())//2, offset_y + 280))
-        
-        friend_rect = pygame.Rect(offset_x + 30, offset_y + 310, 180, 50)
-        ai_rect = pygame.Rect(offset_x + 220, offset_y + 310, 170, 50)
-        mcts_rect = pygame.Rect(offset_x + 400, offset_y + 310, 170, 50)
-        
+        self.screen.blit(mode_label, (offset_x + (content_width - mode_label.get_width())//2, offset_y + 370))
+        friend_rect = pygame.Rect(offset_x + 30, offset_y + 400, 180, 50)
+        ai_rect = pygame.Rect(offset_x + 240, offset_y + 400, 170, 50)
+        mcts_rect = pygame.Rect(offset_x + 430, offset_y + 400, 170, 50)
         friend_color = self.COLOR_MODE_ON if self.friend_enabled else self.COLOR_MODE_OFF
         ai_color = self.COLOR_MODE_ON if self.ai_enabled else self.COLOR_MODE_OFF
         mcts_color = self.COLOR_MODE_ON if self.mcts_enabled else self.COLOR_MODE_OFF
@@ -82,12 +82,11 @@ class StartMenu:
         
         if self.ai_enabled or self.mcts_enabled:
             symbol_label = self.small_font.render("Choose your side:", True, self.COLOR_TEXT)
-            self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, offset_y + 370))
-            
+            self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, offset_y + 460))
             button_spacing = 20
-            total_width = 190 * 2 + button_spacing  
-            x_rect = pygame.Rect(offset_x + (content_width - total_width) // 2, offset_y + 400, 190, 50)
-            o_rect = pygame.Rect(offset_x + (content_width - total_width) // 2 + 190 + button_spacing, offset_y + 400, 190, 50)
+            total_width = 190 * 2 + button_spacing
+            x_rect = pygame.Rect(offset_x + (content_width - total_width) // 2, offset_y + 490, 190, 50)
+            o_rect = pygame.Rect(x_rect.x + 190 + button_spacing, offset_y + 490, 190, 50)
             x_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.CROSS else self.COLOR_SYMBOL_OFF
             o_color = self.COLOR_SYMBOL_ON if self.player_symbol == Player.Type.NAUGHT else self.COLOR_SYMBOL_OFF
             pygame.draw.rect(self.screen, x_color, x_rect, border_radius=10)
@@ -96,8 +95,7 @@ class StartMenu:
             o_text = self.font.render("Play as O", True, self.COLOR_TEXT)
             self.screen.blit(x_text, (x_rect.centerx - x_text.get_width()//2, x_rect.centery - x_text.get_height()//2))
             self.screen.blit(o_text, (o_rect.centerx - o_text.get_width()//2, o_rect.centery - o_text.get_height()//2))
-        
-        start_rect = pygame.Rect(offset_x + 150, offset_y + 470, 300, 60)
+        start_rect = pygame.Rect(offset_x + 150, offset_y + 560, 300, 60)
         pygame.draw.rect(self.screen, self.COLOR_BUTTON, start_rect, border_radius=10)
         start_text = self.title_font.render("START", True, self.COLOR_TEXT)
         self.screen.blit(start_text, (start_rect.centerx - start_text.get_width() // 2, start_rect.centery - start_text.get_height()//2))
@@ -116,25 +114,18 @@ class StartMenu:
         
         text_surface = self.font.render(value, True, self.COLOR_TEXT)
         text_width = min(text_surface.get_width(), field_rect.width - 20)
-        text_rect = pygame.Rect(field_rect.x + 10, field_rect.centery - text_surface.get_height() // 2, 
-                            text_width, text_surface.get_height())
-        
+        text_rect = pygame.Rect(field_rect.x + 10, field_rect.centery - text_surface.get_height() // 2, text_width, text_surface.get_height())
         if text_surface.get_width() > field_rect.width - 20:
-            cropped_surface = pygame.Surface((field_rect.width - 20, text_surface.get_height()))
-            cropped_surface.blit(text_surface, (0, 0), 
-                                (text_surface.get_width() - (field_rect.width - 20), 0, 
-                                field_rect.width - 20, text_surface.get_height()))
+            cropped_surface = pygame.Surface((field_rect.width - 20, text_surface.get_height()), pygame.SRCALPHA)
+            cropped_surface.blit(text_surface, (0, 0), (text_surface.get_width() - (field_rect.width - 20), 0, field_rect.width - 20, text_surface.get_height()))
             self.screen.blit(cropped_surface, text_rect)
         else:
             self.screen.blit(text_surface, text_rect)
         
         if self.active_field == index and self.cursor_visible:
-            cursor_x = text_rect.right + 2 if text_rect.width == field_rect.width - 20 else text_rect.right + 2
-            pygame.draw.line(self.screen, self.COLOR_TEXT, 
-                            (cursor_x, text_rect.top + 2), 
-                            (cursor_x, text_rect.bottom - 2), 2)
-
-        if (hasattr(self, 'error_field') and self.error_message and self.error_field == index and pygame.time.get_ticks() - self.error_timer < self.error_duration):
+            cursor_x = text_rect.right + 2
+            pygame.draw.line(self.screen, self.COLOR_TEXT, (cursor_x, text_rect.top + 2), (cursor_x, text_rect.bottom - 2), 2)
+        if self.error_message and self.error_field == index and pygame.time.get_ticks() - self.error_timer < self.error_duration:
             error_surface = self.small_font.render(self.error_message, True, (255, 100, 100))
             self.screen.blit(error_surface, (field_rect.right + 10, field_rect.centery - error_surface.get_height() // 2))
 
@@ -166,7 +157,7 @@ class StartMenu:
             self.draw()
             clock.tick(30)
         
-        return (int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol, self.fullscreen, self.screen.get_size())
+        return (int(self.m), int(self.n), int(self.k), int(self.d), self.ai_enabled, self.mcts_enabled, self.player_symbol, self.fullscreen, self.screen.get_size())
     
     def validate_k(self, show_message=True):
         """Если k > max(m, n), то уменьшаем k"""
@@ -189,7 +180,24 @@ class StartMenu:
         except ValueError:
             pass
         return False
-    
+
+    def validate_d(self, show_message=True):
+        try:
+            if not self.d:
+                return False
+            
+            d = int(self.d)
+            if d < 1 or d > 10:
+                if show_message:
+                    self.error_message = "D must be 1–10"
+                    self.error_timer = pygame.time.get_ticks()
+                    self.error_field = 3
+                self.d = str(max(1, min(d, 10)))
+                return True
+        except ValueError:
+            pass
+        return False
+
     def handle_event(self, event):
         if event.type == VIDEORESIZE:
             if not self.fullscreen:
@@ -197,29 +205,31 @@ class StartMenu:
                 self.screen = pygame.display.set_mode(self.windowed_size, pygame.RESIZABLE)
         if event.type == QUIT:
             self.running = False
-            self.m = self.n = self.k = "0"
+            self.m = self.n = self.k = self.d = "0"
         elif event.type == KEYDOWN:
             if event.key == K_f:
                 self.toggle_fullscreen()
             if event.key == K_ESCAPE:
                 self.running = False
-                self.m = self.n = self.k = "0"
+                self.m = self.n = self.k = self.d = "0"
             if self.active_field is not None:
                 if event.key == K_RETURN:
                     self.active_field = None
                 elif event.key == K_BACKSPACE:
-                    current = [self.m, self.n, self.k]
+                    current = [self.m, self.n, self.k, self.d]
                     current[self.active_field] = current[self.active_field][:-1]
-                    self.m, self.n, self.k = current
+                    self.m, self.n, self.k, self.d = current
                     if self.active_field in [0, 1]:
                         self.validate_k(show_message=False)
                     elif self.active_field == 2:
                         self.validate_k(show_message=True)
+                    elif self.active_field == 3:
+                        self.validate_d(show_message=True)
                 elif event.unicode.isdigit():
-                    current = [self.m, self.n, self.k]
+                    current = [self.m, self.n, self.k, self.d]
                     if len(current[self.active_field]) < 2:
                         current[self.active_field] = current[self.active_field] + event.unicode
-                        self.m, self.n, self.k = current
+                        self.m, self.n, self.k, self.d = current
                         if self.active_field in [0, 1]:
                             self.validate_k(show_message=False)
                         elif self.active_field == 2:
@@ -230,57 +240,47 @@ class StartMenu:
             x, y = event.pos
             screen_width, screen_height = self.screen.get_size()
             offset_x = (screen_width - 600) // 2
-            offset_y = (screen_height - 550) // 2
+            offset_y = (screen_height - 650) // 2
             
             # Проверка полей ввода
-            for i in range(3):
+            for i in range(4):
                 field_y = offset_y + 100 + i*70
-                if (offset_x + 300 <= x <= offset_x + 500 and 
-                    field_y <= y <= field_y + 40):
+                if (offset_x + 300 <= x <= offset_x + 500 and field_y <= y <= field_y + 40):
                     self.active_field = i
                     break
             else:
                 old_active = self.active_field
                 self.active_field = None
-                if old_active is not None:
+                if old_active == 2:
                     self.validate_k(show_message=True)
-            
-            if (offset_x + 30 <= x <= offset_x + 210 and 
-                offset_y + 310 <= y <= offset_y + 360):
+                if old_active == 3:
+                    self.validate_d(show_message=True)
+            if offset_x + 30 <= x <= offset_x + 210 and offset_y + 400 <= y <= offset_y + 450:
                 self.friend_enabled = True
                 self.ai_enabled = False
                 self.mcts_enabled = False
-
-            if (offset_x + 220 <= x <= offset_x + 390 and 
-                offset_y + 310 <= y <= offset_y + 360):
+            if offset_x + 240 <= x <= offset_x + 410 and offset_y + 400 <= y <= offset_y + 450:
                 self.ai_enabled = True
                 self.friend_enabled = False
                 self.mcts_enabled = False
-
-            if (offset_x + 400 <= x <= offset_x + 570 and 
-                offset_y + 310 <= y <= offset_y + 360):
+            if offset_x + 430 <= x <= offset_x + 600 and offset_y + 400 <= y <= offset_y + 450:
                 self.mcts_enabled = True
                 self.friend_enabled = False
                 self.ai_enabled = False
             
             if self.ai_enabled or self.mcts_enabled:
-                if (offset_x + 150 <= x <= offset_x + 270 and 
-                    offset_y + 400 <= y <= offset_y + 450):
+                if offset_x + 150 <= x <= offset_x + 340 and offset_y + 490 <= y <= offset_y + 540:
                     self.player_symbol = Player.Type.CROSS
-                if (offset_x + 330 <= x <= offset_x + 450 and 
-                    offset_y + 400 <= y <= offset_y + 450):
+                if offset_x + 370 <= x <= offset_x + 560 and offset_y + 490 <= y <= offset_y + 540:
                     self.player_symbol = Player.Type.NAUGHT
-            
-            if (offset_x + 150 <= x <= offset_x + 450 and 
-                offset_y + 470 <= y <= offset_y + 530):
+            if offset_x + 150 <= x <= offset_x + 450 and offset_y + 560 <= y <= offset_y + 620:
                 try:
-                    if not self.m or not self.n or not self.k:
+                    if not (self.m and self.n and self.k and self.d):
                         return
-                    m = int(self.m)
-                    n = int(self.n)
-                    k = int(self.k)
-                    if m > 0 and n > 0 and k > 0:
+                    m, n, k, d = int(self.m), int(self.n), int(self.k), int(self.d)
+                    if m > 0 and n > 0 and k > 0 and d > 0:
                         self.validate_k(show_message=True)
+                        self.validate_d(show_message=True)
                         self.running = False
                 except ValueError:
                     pass
