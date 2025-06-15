@@ -2,22 +2,21 @@ import pygame
 from pygame.locals import *
 from app.player import Player
 
-#TODO не триггериться по скроллу по ячейке
-#TODO нормальный переход в полноэкранный режим, если стартовое меню было в полноэкранном
-
 class StartMenu:
-    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None):
-        pygame.init()
+    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None):
         self.base_width = 800
         self.base_height = 600
-        self.screen = pygame.display.set_mode((self.base_width, self.base_height), pygame.RESIZABLE)
+        self.fullscreen = is_fullscreen_start
+        self.windowed_size = initial_size if initial_size else (self.base_width, self.base_height)
+        flags = pygame.FULLSCREEN if self.fullscreen else pygame.RESIZABLE
+        size = (0, 0) if self.fullscreen else self.windowed_size
+        self.screen = pygame.display.set_mode(size, flags)
         pygame.display.set_caption("MxNxK Game - Settings")
         self.m = str(m) if m is not None else "3"
         self.n = str(n) if n is not None else "3"
         self.k = str(k) if k is not None else "3"
         self.ai_enabled = ai if ai is not None else False
         self.mcts_enabled = mcts if mcts is not None else False
-        # По умолчанию включен режим игры с другом
         self.friend_enabled = not (self.ai_enabled or self.mcts_enabled)
         self.player_symbol = player_symbol if player_symbol is not None else Player.Type.CROSS
         self.active_field = None
@@ -29,13 +28,11 @@ class StartMenu:
         self.COLOR_ACTIVE = (120, 120, 150)
         self.COLOR_TEXT = (240, 240, 240)
         self.COLOR_BUTTON = (90, 120, 200)
-        self.COLOR_MODE_ON = (100, 200, 100)  # Зеленый для выбранного режима
-        self.COLOR_MODE_OFF = (200, 100, 100)  # Красный для невыбранных
+        self.COLOR_MODE_ON = (100, 200, 100)
+        self.COLOR_MODE_OFF = (200, 100, 100)
         self.COLOR_SYMBOL_ON = (130, 100, 250)
         self.COLOR_SYMBOL_OFF = (100, 100, 100)
         self.running = True
-        self.fullscreen = False
-        self.windowed_size = (self.base_width, self.base_height)
         self.cursor_visible = False
         self.cursor_timer = 0
         self.cursor_blink_interval = 500
@@ -83,7 +80,6 @@ class StartMenu:
         self.screen.blit(ai_text, (ai_rect.centerx - ai_text.get_width()//2, ai_rect.centery - ai_text.get_height()//2))
         self.screen.blit(mcts_text, (mcts_rect.centerx - mcts_text.get_width()//2, mcts_rect.centery - mcts_text.get_height()//2))
         
-        # Кнопки выбора символа (появляются только если выбран AI или MCTS)
         if self.ai_enabled or self.mcts_enabled:
             symbol_label = self.small_font.render("Choose your side:", True, self.COLOR_TEXT)
             self.screen.blit(symbol_label, (offset_x + (content_width - symbol_label.get_width())//2, offset_y + 370))
@@ -154,7 +150,6 @@ class StartMenu:
         clock = pygame.time.Clock()
         while self.running:
             current_time = pygame.time.get_ticks()
-            # Обновляем состояние курсора
             if self.active_field is not None:
                 if current_time - self.cursor_timer > self.cursor_blink_interval:
                     self.cursor_visible = not self.cursor_visible
@@ -174,6 +169,7 @@ class StartMenu:
         return (int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.player_symbol, self.fullscreen, self.screen.get_size())
     
     def validate_k(self, show_message=True):
+        """Если k > max(m, n), то уменьшаем k"""
         try:
             if not self.m or not self.n or not self.k:
                 return False
@@ -195,6 +191,10 @@ class StartMenu:
         return False
     
     def handle_event(self, event):
+        if event.type == VIDEORESIZE:
+            if not self.fullscreen:
+                self.windowed_size = (event.w, event.h)
+                self.screen = pygame.display.set_mode(self.windowed_size, pygame.RESIZABLE)
         if event.type == QUIT:
             self.running = False
             self.m = self.n = self.k = "0"
@@ -217,28 +217,16 @@ class StartMenu:
                         self.validate_k(show_message=True)
                 elif event.unicode.isdigit():
                     current = [self.m, self.n, self.k]
-                    if len(current[self.active_field]) < 3:
-                        new_value = current[self.active_field] + event.unicode
-                        try:
-                            new_int_value = int(new_value)
-                            if new_int_value > 30:
-                                # Ограничиваем значение размеров до 30 на 30
-                                current[self.active_field] = "30"
-                                self.error_message = "Max value is 30"
-                                self.error_field = self.active_field
-                                self.error_timer = pygame.time.get_ticks()
-                            else:
-                                current[self.active_field] = new_value
-                            
-                            self.m, self.n, self.k = current
-                            if self.active_field in [0, 1]:
-                                self.validate_k(show_message=False)
-                            elif self.active_field == 2:
-                                self.validate_k(show_message=True)
-                                
-                        except ValueError:
-                            pass
+                    if len(current[self.active_field]) < 2:
+                        current[self.active_field] = current[self.active_field] + event.unicode
+                        self.m, self.n, self.k = current
+                        if self.active_field in [0, 1]:
+                            self.validate_k(show_message=False)
+                        elif self.active_field == 2:
+                            self.validate_k(show_message=True)
         elif event.type == MOUSEBUTTONDOWN:
+            if event.button != 1:
+                return
             x, y = event.pos
             screen_width, screen_height = self.screen.get_size()
             offset_x = (screen_width - 600) // 2
@@ -296,7 +284,3 @@ class StartMenu:
                         self.running = False
                 except ValueError:
                     pass
-        elif event.type == VIDEORESIZE:
-            if not self.fullscreen:
-                self.base_width, self.base_height = event.w, event.h
-                self.screen = pygame.display.set_mode((event.w, event.h), pygame.RESIZABLE)

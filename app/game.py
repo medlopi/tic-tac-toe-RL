@@ -341,4 +341,5 @@ Your command is >   """
         Сбрасывает игровое поле
         """
         self.current_state = Node()
-        self.mcts_player.reset_player()
+        if self.mcts_player:
+            self.mcts_player.reset_player()

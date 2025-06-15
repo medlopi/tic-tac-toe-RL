@@ -201,7 +201,10 @@ class TrainPipeline():
 if __name__ == '__main__':
     training_pipeline = TrainPipeline()
     losses, entrs = training_pipeline.run()
+    f = open(f"{CONST_FIELD_HEIGHT}x{CONST_FIELD_WIDTH}x{CONST_STREAK_TO_WIN_SIZE}-logs", 'w')
     print("LOSS")
     print(losses)
+    print(losses, file=f)
     print("ENTRS")
     print(entrs)
+    print(entrs, file=f)
