@@ -338,15 +338,15 @@ class PyGameInterface:
     def _draw_opponent_inventory(self):
         opponent = Player.Type(abs(self.game.current_state.who_moves.value - 1))
         screen_width, screen_height = self.screen.get_size()
-        inventory_y = self.field_y - INVENTORY_HEIGHT
+        inventory_y = screen_height - INVENTORY_HEIGHT
         pygame.draw.rect(self.screen, COLOR_FIELD_BG, (0, inventory_y, screen_width, INVENTORY_HEIGHT))
 
-        x = PADDING
+        x = screen_width - PADDING - PIECE_SIZE
         for piece in self.inventory[opponent]:
             rect = pygame.Rect(x, inventory_y + PADDING, PIECE_SIZE, PIECE_SIZE)
             piece.draw(self.screen, rect=rect)
             piece._inventory_rect = rect
-            x += PIECE_SIZE + PADDING
+            x -= (PIECE_SIZE + PADDING)
 
     def _draw_status(self):
         width = self.screen.get_width()
@@ -398,7 +398,7 @@ class PyGameInterface:
     def _draw_inventory(self):
         screen_width, screen_height = self.screen.get_size()
         inventory_y = screen_height - INVENTORY_HEIGHT
-        pygame.draw.rect(self.screen, COLOR_FIELD_BG, (0, inventory_y, screen_width, INVENTORY_HEIGHT))
+        # pygame.draw.rect(self.screen, COLOR_FIELD_BG, (0, inventory_y, screen_width, INVENTORY_HEIGHT))
 
         x = PADDING
         for piece in self.inventory[self.game.current_state.who_moves]:
