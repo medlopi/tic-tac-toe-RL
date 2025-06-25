@@ -60,12 +60,12 @@ class TrainPipeline():
         """
         extend_data = []
         d, h, w = self.n_features, self.board_height, self.board_width
-        count_figures = 1 << d
+        count_figures = 1 << (d - 1)
 
         for state, mcts_prob, winner in play_data:
             prob_3d = mcts_prob.reshape(count_figures, h, w)
 
-            for k in [1, 2, 3, 4]:
+            for k in [1, 2, 3]:
                 equi_state = np.array([np.rot90(s, k) for s in state])
                 equi_prob  = np.array([np.rot90(p, k) for p in prob_3d])
                 extend_data.append((equi_state, equi_prob.flatten(), winner))

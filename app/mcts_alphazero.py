@@ -78,14 +78,14 @@ class MCTSPlayer:
         self.mcts.move_and_update(move)
     
     def get_move(self, temperature_contant: float = 1e-3, return_prob: bool = False):
-        count_different_figures = 1 << Field.COUNT_FEATURES
+        count_different_figures = 1 << (Field.COUNT_FEATURES - 1)
         move_probs = np.zeros(count_different_figures*Field.HEIGHT*Field.WIDTH)
         moves, probs = self.mcts.get_move_probs(temperature_contant)
         moves = [
-            cell.figure * Field.WIDTH * Field.HEIGHT + cell.row * Field.WIDTH + cell.col 
+            (cell.figure % count_different_figures) * Field.WIDTH * Field.HEIGHT + cell.row * Field.WIDTH + cell.col 
             for cell in moves
         ]
-        move_probs[list(moves)] = probs
+        move_probs[moves] = probs
 
         if self._is_selfplay:
             # add Dirichlet Noise for exploration
@@ -98,6 +98,8 @@ class MCTSPlayer:
                 move % Field.WIDTH,
                 move // (Field.WIDTH * Field.HEIGHT)
             )
+            if self.mcts._root.who_moves == Player.Type.NAUGHT:
+                move_cell.figure += count_different_figures
             self.mcts.move_and_update(move_cell)
         else:
             # with the default temperature_contant=1e-3, it is almost
@@ -108,6 +110,8 @@ class MCTSPlayer:
                 move % Field.WIDTH,
                 move // (Field.WIDTH * Field.HEIGHT)
             )
+            if self.mcts._root.who_moves == Player.Type.NAUGHT:
+                move_cell.figure += count_different_figures
             # print(f'Best move: {move_cell.row} {move_cell.col} {move_cell.figure}')
 
         if return_prob:
