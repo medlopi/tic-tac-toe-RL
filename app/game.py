@@ -36,11 +36,11 @@ class Game:
 
         def __print_prediction_with_solver():
             pos, really_best_cell = get_position_status_and_best_move(self.current_state)
-            print("Solver says that", really_best_cell.row, really_best_cell.col, "is a greate move")
+            print("Solver says that", really_best_cell.row, really_best_cell.col, really_best_cell.figure, "is a greate move")
 
         def __print_prediction_no_solver():
             maybe_best_cell: Field.Cell = self.mcts_player.get_move()
-            print("MCTS says that", maybe_best_cell.row, maybe_best_cell.col, "may be a greate move")
+            print("MCTS says that", maybe_best_cell.row, maybe_best_cell.col, maybe_best_cell.figure, "a greate move")
 
         if (
             min(Field.HEIGHT, Field.WIDTH) < 1
@@ -52,13 +52,13 @@ class Game:
 
             if max(Field.HEIGHT, Field.WIDTH) <= MAX_FIELD_SIZE_FOR_SOLVER:
                 __print_prediction_with_solver()
-            if self.current_state.who_moves == Player.Type.CROSS:
+            if self.current_state.who_moves == Player.Type.NAUGHT:
                 __print_prediction_no_solver()
             print()
 
             user_input = input(
                 f"""                               
-Enter <<[row_index] [column_index]>> to make a move to the selected square.
+Enter <<[row_index] [column_index] [figure_value]>> to make a move to the selected square.
 Enter <<-1>> to cancel a postposted move.
 Enter <<Q>> to exit.
 
@@ -103,7 +103,9 @@ Your command is >   """
 
         def __print_row(row_index, row):
             print("|" + str(row_index)[-3:].rjust(3) + "| ", end="")  # нумеруем строки
-            print(" | ".join(Player.Icon[cell] for cell in row), end=" |\n")
+            print(" | ".join(
+                f'{cell:0{Field.COUNT_FEATURES}b}' if cell != -1 else '-' * Field.COUNT_FEATURES for cell in row
+            ), end=" |\n")
 
         """
         собственно печать игрового поля
@@ -173,19 +175,26 @@ Your command is >   """
             __go_back_to_parent(self)
 
             return Game.InputCommandType.ROLL_BACK
-
-        if self.__is_correct_coordinates(user_input):
-            row, column = map(int, user_input.split())
+        
+        # if self.__is_correct_coordinates(user_input):
+        #     row, column = map(int, user_input.split())
             
-            self.mcts_player.move_and_update(Field.Cell(row, column))
-            self.__make_move(Field.Cell(row, column))
+        #     self.mcts_player.move_and_update(Field.Cell(row, column))
+        #     self.__make_move(Field.Cell(row, column))
 
-            return Game.InputCommandType.MAKE_MOVE
+        #     return Game.InputCommandType.MAKE_MOVE
 
-        else:
-            __catch_unexpected_command()
+        # else:
+        #     __catch_unexpected_command()
 
-            return Game.InputCommandType.ERROR
+        #     return Game.InputCommandType.ERROR
+
+        cell = Field.Cell(*map(int, user_input.split()))
+            
+        self.mcts_player.move_and_update(cell)
+        self.__make_move(cell)
+
+        return Game.InputCommandType.MAKE_MOVE
 
     def __make_move(self, cell: Field.Cell) -> None:
         """
@@ -195,7 +204,7 @@ Your command is >   """
         """
         нужные локально функции
         """
-        row, column = cell.row, cell.col
+        row, column, figure = cell.row, cell.col, cell.figure
         def __wrong_ceil_chosen() -> None:
             print(
                 f"Invalid coordinates! You must choose a free cell within [0, 0]--[{Field.HEIGHT - 1}, {Field.WIDTH - 1}]. Try again please"
@@ -225,11 +234,11 @@ Your command is >   """
             __wrong_ceil_chosen()
             return
 
-        if self.current_state.field[row][column] == Player.Type.NONE:
+        if self.current_state.field[row][column] == -1:
 
             state_after_move = Node(
                 parent=self.current_state,
-                move=Field.Cell(row, column)
+                move=cell
             )
 
             self.current_state = state_after_move
@@ -247,7 +256,7 @@ Your command is >   """
             __wrong_ceil_chosen()
 
     def make_silent_move(self, cell: Field.Cell) -> None:
-        if self.current_state.field[cell.row][cell.col] == Player.Type.NONE:
+        if self.current_state.field[cell.row][cell.col] == -1:
             state_after_move = Node(
                 parent=self.current_state,
                 move=cell

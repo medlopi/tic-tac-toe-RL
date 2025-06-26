@@ -3,7 +3,7 @@ from pygame.locals import *
 from app.player import Player
 
 class StartMenu:
-    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None):
+    def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None, d=None):
         self.base_width = 800
         self.base_height = 800 
         self.fullscreen = is_fullscreen_start
@@ -16,10 +16,11 @@ class StartMenu:
         flags = pygame.FULLSCREEN if self.fullscreen else pygame.RESIZABLE
         size = (0, 0) if self.fullscreen else self.windowed_size
         self.screen = pygame.display.set_mode(size, flags)
-        pygame.display.set_caption("MxNxK Game - Settings")
-        self.m = str(m) if m is not None else "3"
-        self.n = str(n) if n is not None else "3"
-        self.k = str(k) if k is not None else "3"
+        pygame.display.set_caption("MxNxKxD Game - Settings")
+        self.m = str(m) if m is not None else "4"
+        self.n = str(n) if n is not None else "4"
+        self.k = str(k) if k is not None else "4"
+        self.d = str(d) if d is not None else "4"
         self.ai_enabled = ai if ai is not None else False
         self.mcts_enabled = mcts if mcts is not None else False
         self.friend_enabled = not (self.ai_enabled or self.mcts_enabled)
@@ -52,7 +53,7 @@ class StartMenu:
         """Вспомогательная функция для получения всех прямоугольников элементов интерфейса."""
         screen_width, screen_height = self.screen.get_size()
         content_width = 600
-        content_height = 700
+        content_height = 800
         offset_x = (screen_width - content_width) // 2
         offset_y = (screen_height - content_height) // 2
         
@@ -61,10 +62,11 @@ class StartMenu:
         rects['m_input'] = pygame.Rect(offset_x + 300, offset_y + 100, 200, 40)
         rects['n_input'] = pygame.Rect(offset_x + 300, offset_y + 170, 200, 40)
         rects['k_input'] = pygame.Rect(offset_x + 300, offset_y + 240, 200, 40)
+        rects['d_input'] = pygame.Rect(offset_x + 300, offset_y + 310, 200, 40)
 
         btn_w, btn_h = 250, 50
         spacing = 20
-        row1_y = offset_y + 340
+        row1_y = offset_y + 400
         row2_y = row1_y + btn_h + spacing
         col1_x = offset_x + (content_width - (btn_w * 2 + spacing)) // 2
         col2_x = col1_x + btn_w + spacing
@@ -88,15 +90,16 @@ class StartMenu:
         self.screen.fill(self.COLOR_BG)
         rects, offset_x, offset_y, content_width, _ = self.get_layout_rects()
         
-        title = self.title_font.render("MxNxK Settings", True, self.COLOR_TEXT)
+        title = self.title_font.render("MxNxKxD Settings", True, self.COLOR_TEXT)
         self.screen.blit(title, (offset_x + (content_width - title.get_width())//2, offset_y + 20))
         
         self.draw_input("Width (M):", self.m, offset_y + 100, 0, offset_x)
         self.draw_input("Height (N):", self.n, offset_y + 170, 1, offset_x)
         self.draw_input("Win Streak (K):", self.k, offset_y + 240, 2, offset_x)
+        self.draw_input("Features (D):", self.d, offset_y + 310, 3, offset_x)
         
         mode_label = self.small_font.render("Game mode:", True, self.COLOR_TEXT)
-        self.screen.blit(mode_label, (offset_x + (content_width - mode_label.get_width())//2, offset_y + 300))
+        self.screen.blit(mode_label, (offset_x + (content_width - mode_label.get_width())//2, offset_y + 370))
         
         friend_color = self.COLOR_MODE_ON if self.friend_enabled else self.COLOR_MODE_OFF
         ai_color = self.COLOR_MODE_ON if self.ai_enabled else self.COLOR_MODE_OFF
@@ -164,25 +167,18 @@ class StartMenu:
         
         text_surface = self.font.render(value, True, self.COLOR_TEXT)
         text_width = min(text_surface.get_width(), field_rect.width - 20)
-        text_rect = pygame.Rect(field_rect.x + 10, field_rect.centery - text_surface.get_height() // 2, 
-                            text_width, text_surface.get_height())
-        
+        text_rect = pygame.Rect(field_rect.x + 10, field_rect.centery - text_surface.get_height() // 2, text_width, text_surface.get_height())
         if text_surface.get_width() > field_rect.width - 20:
-            cropped_surface = pygame.Surface((field_rect.width - 20, text_surface.get_height()))
-            cropped_surface.blit(text_surface, (0, 0), 
-                                (text_surface.get_width() - (field_rect.width - 20), 0, 
-                                field_rect.width - 20, text_surface.get_height()))
+            cropped_surface = pygame.Surface((field_rect.width - 20, text_surface.get_height()), pygame.SRCALPHA)
+            cropped_surface.blit(text_surface, (0, 0), (text_surface.get_width() - (field_rect.width - 20), 0, field_rect.width - 20, text_surface.get_height()))
             self.screen.blit(cropped_surface, text_rect)
         else:
             self.screen.blit(text_surface, text_rect)
         
         if self.active_field == index and self.cursor_visible:
-            cursor_x = text_rect.right + 2 if text_rect.width == field_rect.width - 20 else text_rect.right + 2
-            pygame.draw.line(self.screen, self.COLOR_TEXT, 
-                            (cursor_x, text_rect.top + 2), 
-                            (cursor_x, text_rect.bottom - 2), 2)
-
-        if (hasattr(self, 'error_field') and self.error_message and self.error_field == index and pygame.time.get_ticks() - self.error_timer < self.error_duration):
+            cursor_x = text_rect.right + 2
+            pygame.draw.line(self.screen, self.COLOR_TEXT, (cursor_x, text_rect.top + 2), (cursor_x, text_rect.bottom - 2), 2)
+        if self.error_message and self.error_field == index and pygame.time.get_ticks() - self.error_timer < self.error_duration:
             error_surface = self.small_font.render(self.error_message, True, (255, 100, 100))
             self.screen.blit(error_surface, (field_rect.right + 10, field_rect.centery - error_surface.get_height() // 2))
 
@@ -214,7 +210,7 @@ class StartMenu:
             self.draw()
             clock.tick(30)
         
-        return (int(self.m), int(self.n), int(self.k), self.ai_enabled, self.mcts_enabled, self.mcts_vs_dqn_mode, self.mcts_vs_dqn_choice, self.player_symbol, self.fullscreen, self.screen.get_size())
+        return (int(self.m), int(self.n), int(self.k), int(self.d), self.ai_enabled, self.mcts_enabled, self.mcts_vs_dqn_mode, self.mcts_vs_dqn_choice, self.player_symbol, self.fullscreen, self.screen.get_size())
     
     def validate_k(self, show_message=True):
         """Если k > max(m, n), то уменьшаем k"""
@@ -237,7 +233,24 @@ class StartMenu:
         except ValueError:
             pass
         return False
-    
+
+    def validate_d(self, show_message=True):
+        try:
+            if not self.d:
+                return False
+            
+            d = int(self.d)
+            if d < 1 or d > 10:
+                if show_message:
+                    self.error_message = "D must be 1–10"
+                    self.error_timer = pygame.time.get_ticks()
+                    self.error_field = 3
+                self.d = str(max(1, min(d, 10)))
+                return True
+        except ValueError:
+            pass
+        return False
+
     def handle_event(self, event):
         if event.type == VIDEORESIZE:
             if not self.fullscreen:
@@ -245,29 +258,31 @@ class StartMenu:
                 self.screen = pygame.display.set_mode(self.windowed_size, pygame.RESIZABLE)
         if event.type == QUIT:
             self.running = False
-            self.m = self.n = self.k = "0"
+            self.m = self.n = self.k = self.d = "0"
         elif event.type == KEYDOWN:
             if event.key == K_f:
                 self.toggle_fullscreen()
             if event.key == K_ESCAPE:
                 self.running = False
-                self.m = self.n = self.k = "0"
+                self.m = self.n = self.k = self.d = "0"
             if self.active_field is not None:
                 if event.key == K_RETURN:
                     self.active_field = None
                 elif event.key == K_BACKSPACE:
-                    current = [self.m, self.n, self.k]
+                    current = [self.m, self.n, self.k, self.d]
                     current[self.active_field] = current[self.active_field][:-1]
-                    self.m, self.n, self.k = current
+                    self.m, self.n, self.k, self.d = current
                     if self.active_field in [0, 1]:
                         self.validate_k(show_message=False)
                     elif self.active_field == 2:
                         self.validate_k(show_message=True)
+                    elif self.active_field == 3:
+                        self.validate_d(show_message=True)
                 elif event.unicode.isdigit():
-                    current = [self.m, self.n, self.k]
+                    current = [self.m, self.n, self.k, self.d]
                     if len(current[self.active_field]) < 2:
                         current[self.active_field] = current[self.active_field] + event.unicode
-                        self.m, self.n, self.k = current
+                        self.m, self.n, self.k, self.d = current
                         if self.active_field in [0, 1]:
                             self.validate_k(show_message=False)
                         elif self.active_field == 2:
@@ -287,6 +302,8 @@ class StartMenu:
                 self.active_field = 1
             elif rects['k_input'].collidepoint(event.pos):
                 self.active_field = 2
+            elif rects['d_input'].collidepoint(event.pos):
+                self.active_field = 3
             
             if rects['friend_btn'].collidepoint(event.pos):
                 self.friend_enabled = True
@@ -326,13 +343,12 @@ class StartMenu:
                     
             if rects['start_btn'].collidepoint(event.pos):
                 try:
-                    if not self.m or not self.n or not self.k:
+                    if not (self.m and self.n and self.k and self.d):
                         return
-                    m = int(self.m)
-                    n = int(self.n)
-                    k = int(self.k)
-                    if m > 0 and n > 0 and k > 0:
+                    m, n, k, d = int(self.m), int(self.n), int(self.k), int(self.d)
+                    if m > 0 and n > 0 and k > 0 and d > 0:
                         self.validate_k(show_message=True)
+                        self.validate_d(show_message=True)
                         if self.mcts_vs_dqn_mode and self.mcts_vs_dqn_choice is None:
                             pass
                         else:

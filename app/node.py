@@ -21,17 +21,21 @@ class Node:
 
         if parent is None:
             self.who_moves: Player.Type = Player.Type.CROSS
-            self.field: list[list[Player.Type]] = [
-                [Player.Type.NONE for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
+            self.field: list[list[int]] = [
+                [-1 for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
             ] 
             self.free_cells_count: int = Field.WIDTH * Field.HEIGHT
             self.last_move: Field.Cell = Field.Cell()
+            self.available_figures = set(range(1 << Field.COUNT_FEATURES))
         else:
             self.field = copy.deepcopy(parent.field)
-            self.field[int(move.row)][int(move.col)] = parent.who_moves
+            self.field[move.row][move.col] = move.figure
             self.who_moves = Player.Type(abs(parent.who_moves.value - 1))
             self.free_cells_count = parent.free_cells_count - 1
             self.last_move = move
+            self.available_figures = parent.available_figures.copy()
+            if Field.COUNT_FEATURES > 1:
+                self.available_figures.remove(move.figure)
 
     def get_depth(self) -> int:
         """
@@ -76,11 +80,16 @@ class Node:
         return self._parent is None
     
     def get_available_moves(self) -> list[Field.Cell]:
+        count_different_figures = 1 << (Field.COUNT_FEATURES - 1)
+        shift = count_different_figures * self.who_moves.value
         result = []
-        for i in range(Field.HEIGHT):
-            for j in range(Field.WIDTH):
-                if self.field[i][j] == Player.Type.NONE:
-                    result.append(Field.Cell(i, j))
+        for figure in range(count_different_figures):
+            if (figure + shift) not in self.available_figures:
+                continue
+            for i in range(Field.HEIGHT):
+                for j in range(Field.WIDTH):
+                    if self.field[i][j] == -1:
+                        result.append(Field.Cell(i, j, figure + shift))
         return result
 
     def check_win(self) -> bool:
@@ -91,27 +100,32 @@ class Node:
         if self.last_move.row == -1:
             return False
         
-        for direction in range(4):
-            count = 1
+        last_move_cell = f'{self.field[self.last_move.row][self.last_move.col]:0{Field.COUNT_FEATURES}b}'
+        
+        for i in range(Field.COUNT_FEATURES):
+        
+            for direction in range(4):
+                count = 1
 
-            for _ in range(2):
-                row = self.last_move.row + DIRECTIONS[direction][0]
-                col = self.last_move.col + DIRECTIONS[direction][1]
+                for _ in range(2):
+                    row = self.last_move.row + DIRECTIONS[direction][0]
+                    col = self.last_move.col + DIRECTIONS[direction][1]
 
-                while (
-                    0 <= row < Field.HEIGHT and
-                    0 <= col < Field.WIDTH and
-                    self.field[row][col] == self.field[self.last_move.row][self.last_move.col]
-                ):
-                    count += 1
-                    row += DIRECTIONS[direction][0]
-                    col += DIRECTIONS[direction][1]
+                    while (
+                        0 <= row < Field.HEIGHT and
+                        0 <= col < Field.WIDTH and
+                        self.field[row][col] != -1 and 
+                        f'{self.field[row][col]:0{Field.COUNT_FEATURES}b}'[i] == last_move_cell[i]
+                    ):
+                        count += 1
+                        row += DIRECTIONS[direction][0]
+                        col += DIRECTIONS[direction][1]
 
-                direction = (direction + 4) % 8
+                    direction = (direction + 4) % 8
 
-            if count >= Field.STREAK_TO_WIN:
-                return True
-            
+                if count >= Field.STREAK_TO_WIN:
+                    return True
+                
         return False
 
     def check_game_state(self) -> GameStates:
@@ -133,34 +147,41 @@ class Node:
 
     def current_state(self):
         """
-        Возвращает текущее состояние доски в виде np.array формы (4, HEIGHT, WIDTH):
-        0-й канал: клетки текущего игрока (1.0, если занято, иначе 0.0)
-        1-й канал: клетки противника (1.0, если занято, иначе 0.0)
-        2-й канал: последняя сыгранная клетка (1.0 только для последнего хода)
-        3-й канал: чей ход (все заполнено 1.0, если ходит крестик, иначе 0.0)
+        Возвращает текущее состояние доски в виде np.array формы (2*FEATURES+2, HEIGHT, WIDTH):
+        каналы 0-1: клетки текущего игрока и клетки соперника
+        каналы 2-2D-1: по 2 канала на каждое из D-1 свойств
+        канал 2D: последняя сыгранная клетка
+        канал 2D+1: чей ход
         """
-        state = np.zeros((4, Field.HEIGHT, Field.WIDTH), dtype=np.float32)
-        # Определяем тип противника
-        current = self.who_moves
-        opponent = Player.Type(abs(current.value - 1))
+        h, w, d = Field.HEIGHT, Field.WIDTH, Field.COUNT_FEATURES
+        state = np.zeros((2 * d + 2, h, w), dtype=np.float32)
 
-        # Заполняем каналы 0 и 1 (клетки текущего игрока и противника)
-        for i in range(Field.HEIGHT):
-            for j in range(Field.WIDTH):
-                if self.field[i][j] == current:
-                    state[0][i][j] = 1.0
-                elif self.field[i][j] == opponent:
-                    state[1][i][j] = 1.0
+        current = self.who_moves.value
+
+        # Каналы 0, ..., 2D - 1
+        for i in range(h):
+            for j in range(w):
+                figure = self.field[i][j]
+                if figure == -1:
+                    continue
+
+                binary = f'{figure:0{d}b}'
+                shift = int(int(binary[0]) != current)
+                state[shift, i, j] = 1.0
+
+                for k in range(1, d):
+                    if int(binary[k]):
+                        state[2 * k + shift, i, j] = 1.0
 
         # Последний ход
-        if self.last_move != Field.Cell(-1, -1):
-            state[2][self.last_move.row][self.last_move.col] = 1.0
+        if self.last_move != Field.Cell():
+            state[2 * d, self.last_move.row, self.last_move.col] = 1.0
 
-        # Канал чей ход
+        # Чей ход
         if self.who_moves == Player.Type.CROSS:
-            state[3][:, :] = 1.0
+            state[2 * d + 1, :, :] = 1.0
 
-        return state[:, ::-1, :]
+        return state
     
     def define_winner(self, game_state: GameStates) -> Union[Player.Type, None]:
         if game_state != GameStates.CONTINUE:

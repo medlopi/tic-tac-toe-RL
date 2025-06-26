@@ -5,8 +5,6 @@ from app.game import Game
 from app.field import Field, GameStates
 from app.player import Player
 
-#TODO D features...
-
 COLOR_BG = (140, 140, 140)
 COLOR_FIELD_BG = (180, 180, 180)
 COLOR_STATUS = (53, 0, 211)
@@ -74,7 +72,7 @@ class PyGameInterface:
         size = (0, 0) if self.fullscreen else self.initial_size if self.initial_size else (800, 600)
         
         self.screen = pygame.display.set_mode(size, flags)
-        pygame.display.set_caption("MxNxK Game (Scroll to Zoom, Right-Click+Drag to Pan)")
+        pygame.display.set_caption("MxNxKxD Game (Scroll to Zoom, Right-Click+Drag to Pan)")
         self.handle_resize()
 
     def update_allowed_click(self):
@@ -209,7 +207,8 @@ class PyGameInterface:
             
             if self.game_over:
                 self.reset_game()
-                self.comp_player.reset_player()
+                if self.comp_player is not None:
+                    self.comp_player.reset_player()
             elif self.allowed_to_click:
                 self.handle_click(event.pos)
 
@@ -258,10 +257,11 @@ class PyGameInterface:
         row = int((relative_y - self.view_offset_y) / self.current_cell_size)
         
         if 0 <= row < Field.HEIGHT and 0 <= col < Field.WIDTH:
-            if self.game.current_state.field[row][col] == Player.Type.NONE:
-                self.game.make_silent_move(Field.Cell(row, col))
+            if self.game.current_state.field[row][col] == -1:
+                move = Field.Cell(row, col, self.game.current_state.who_moves.value)
+                self.game.make_silent_move(move)
                 if self.mcts_enabled:
-                    self.game.mcts_player.move_and_update(Field.Cell(row, col))
+                    self.game.mcts_player.move_and_update(move)
                 
                 self.update_game_state()
                 
@@ -355,13 +355,13 @@ class PyGameInterface:
         outline_thickness = max(2, int(cell_size * 0.1))
         main_thickness = max(1, int(cell_size * 0.08))
 
-        if cell_content == Player.Type.CROSS:
+        if cell_content == 0:
             pygame.draw.line(surface, COLOR_X_OUTLINE, (x + padding, y + padding), (x + cell_size - padding, y + cell_size - padding), outline_thickness)
             pygame.draw.line(surface, COLOR_X_OUTLINE, (x + cell_size - padding, y + padding), (x + padding, y + cell_size - padding), outline_thickness)
             pygame.draw.line(surface, COLOR_X_MAIN, (x + padding, y + padding), (x + cell_size - padding, y + cell_size - padding), main_thickness)
             pygame.draw.line(surface, COLOR_X_MAIN, (x + cell_size - padding, y + padding), (x + padding, y + cell_size - padding), main_thickness)
         
-        elif cell_content == Player.Type.NAUGHT:
+        elif cell_content == 1:
             center = (x + cell_size / 2, y + cell_size / 2)
             radius = cell_size / 2 - padding
             if radius > 0:
@@ -413,7 +413,10 @@ class PyGameInterface:
         field = self.game.current_state.field
         last_move = self.game.current_state.last_move
         if not last_move or last_move.row == -1: return None
-        player = field[last_move.row][last_move.col]
+        if field[last_move.row][last_move.col] == 0:
+            player = Player.Type.CROSS
+        else:
+            player = Player.Type.NAUGHT
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
         for dr, dc in directions:
             line = self.check_direction(field, last_move.row, last_move.col, dr, dc, player)
