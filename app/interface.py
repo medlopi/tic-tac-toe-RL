@@ -413,10 +413,7 @@ class PyGameInterface:
         field = self.game.current_state.field
         last_move = self.game.current_state.last_move
         if not last_move or last_move.row == -1: return None
-        if field[last_move.row][last_move.col] == 0:
-            player = Player.Type.CROSS
-        else:
-            player = Player.Type.NAUGHT
+        player = field[last_move.row][last_move.col]
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
         for dr, dc in directions:
             line = self.check_direction(field, last_move.row, last_move.col, dr, dc, player)
