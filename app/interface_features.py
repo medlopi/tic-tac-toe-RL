@@ -43,10 +43,11 @@ class Figure:
         thickness = int(size * 0.04) if is_thin_line else int(size * 0.08)
         
         has_center_dot = len(self.bits) > 4 and self.bits[4] == 1
-        
-        center_dot_is_blue = len(self.bits) > 5 and self.bits[5] == 1 
-        center_dot_color = (0, 0, 255) if center_dot_is_blue else (255, 0, 0)
+        center_dot_color = (255, 0, 0)
 
+        has_center_square_outline = len(self.bits) > 5 and self.bits[5] == 1
+        center_square_color = (0, 0, 255)
+        
         render_area_size = size * base_scale_on_canvas
         rect_margin = (size - render_area_size) / 2
         shape_rect = pygame.Rect(rect_margin, rect_margin, render_area_size, render_area_size)
@@ -58,10 +59,18 @@ class Figure:
         else:
             pygame.draw.ellipse(surf, primary_color, shape_rect, thickness)
 
+        if has_center_square_outline:
+            square_size = max(5, int(render_area_size * 0.3))
+            square_rect = pygame.Rect(0, 0, square_size, square_size)
+            square_rect.center = shape_rect.center
+            pygame.draw.rect(surf, center_square_color, square_rect, max(1, thickness // 3))
+
         if has_center_dot:
             dot_radius = max(2, thickness // 2, int(render_area_size * 0.1))
+            if has_center_square_outline:
+                dot_radius = max(1, int(square_size * 0.3)) 
             pygame.draw.circle(surf, center_dot_color, shape_rect.center, dot_radius)
-        
+            
         return surf
 
     def draw(self, surface, display_rect: pygame.Rect = None, center_pos: tuple = None, display_size: int = None):
@@ -167,6 +176,7 @@ class PyGameInterfaceFeatures:
         if num_pieces_per_player > self.MAX_PIECES_PER_INV_COLUMN and size_one_col < self.MIN_INV_PIECE_SIZE * 1.5 :
             potential_cols = 2
             rows_per_column_multi = (num_pieces_per_player + potential_cols -1) // potential_cols
+            if rows_per_column_multi == 0 : rows_per_column_multi = 1 # Avoid division by zero
             size_multi_col = (available_height_for_inv - (rows_per_column_multi + 1) * PADDING) / rows_per_column_multi
             
             if size_multi_col > size_one_col or size_one_col < self.MIN_INV_PIECE_SIZE :
