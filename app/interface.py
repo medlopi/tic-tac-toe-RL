@@ -122,21 +122,31 @@ class PyGameInterface:
                                 calculated_move = self.game.mcts_player.get_move()
                             else:
                                 calculated_move = self.comp_player.get_move()
+
                         elif who_moves == Player.Type.NAUGHT:
                             if self.mcts_vs_dqn_choice == 'dqn_x':
                                 calculated_move = self.game.mcts_player.get_move()
                             else:
                                 calculated_move = self.comp_player.get_move()
+
                     calculating_thread = threading.Thread(target=calculate_move, daemon=True)
                     calculating_thread.start()
 
                 if calculating_thread and not calculating_thread.is_alive():
                     if calculated_move is not None:
                         self.game.make_silent_move(calculated_move)
-
-                        self.comp_player.move_and_update(calculated_move)
-                        self.game.mcts_player.move_and_update(calculated_move)
                         
+                        prev_player = Player.Type.NAUGHT if self.game.current_state.who_moves == Player.Type.CROSS else Player.Type.CROSS
+                        if prev_player == Player.Type.CROSS:
+                            if self.mcts_vs_dqn_choice == 'mcts_x':
+                                self.game.mcts_player.move_and_update(calculated_move)
+                            else:
+                                self.comp_player.move_and_update(calculated_move)
+                        elif prev_player == Player.Type.NAUGHT:
+                            if self.mcts_vs_dqn_choice == 'mcts_x':
+                                self.comp_player.move_and_update(calculated_move)
+                            else:
+                                self.game.mcts_player.move_and_update(calculated_move)
                         self.update_game_state()
                         calculated_move = None
                     calculating_thread = None
