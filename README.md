@@ -1,4 +1,4 @@
-# tic-tac-toe 
+# tic-tac-toe RL
 
 ## Требования
 - Python 3.10 или выше (рекомендуется Python 3.12)
@@ -25,62 +25,89 @@ sudo apt update
 sudo apt install python3.12 python3.12-venv
 ```
 
-## Как запустить игру?
+## Быстрый старт
 
-1. Для начала в **app/game_config.py** нужно выставить интересующие Вас настройки (#TODO: сделать это красивее).
-
-2. Если впервые скачали проект, создайте виртуальное окружение и установите необходимые библиотеки:
+1. Создайте виртуальное окружение и установите зависимости:
 
 ### Windows
 ```shell
 python -m venv .venv
-
 .venv\Scripts\activate
-
-pip install -r requirements.txt
+pip install -r app/basic_game_core/config/requirements.txt
 ```
 
 ### macOS/Linux
 ```shell
 python3.12 -m venv .venv
-
 source ./.venv/bin/activate
-
-pip install -r requirements.txt
+pip install -r app/basic_game_core/config/requirements.txt
 ```
 
-3. Чтобы запустить игру (или любой другой модуль):
+2. При необходимости настройте параметры игры в `app/basic_game_core/config/game_config.py`.
 
-**Важно:** Все команды запуска выполняйте из корня проекта! Если файл находится в подпапке, используйте запуск через `-m` и относительный путь через точку.
+## Краткое описание ключевых файлов
 
-### Примеры:
+- **main.py** — запуск графической игры (pygame), поддержка разных режимов.
+- **bot_play.py** — запуск серии игр между ботами, анализ их силы.
+- **count_states.py** — анализ дерева игры, подсчёт уникальных состояний.
+- **app/models_training/train.py** — обучение нейросети методом AlphaZero.
+- **app/models_training/policy_value_net_torch.py** — архитектура нейросети (PyTorch).
+- **app/basic_game_core/game.py, field.py, node.py, player.py** — базовая логика игры.
+- **app/basic_game_core/config/game_config.py** — основные параметры игры (размеры поля, количество фич и т.д.).
+- **app/basic_game_core/config/requirements.txt** — зависимости проекта.
 
-#### Запуск основной игры
+## Как запускать?
 
-##### Windows
-```shell
-python -m main
-```
-##### macOS/Linux
-```shell
-python3 -m main
-```
+**Все команды выполняйте из корня проекта!**
 
-#### Запуск тренировки (пример)
+### Запуск графической игры
 
-##### Windows
-```shell
-python -m app.models.train
-```
-##### macOS/Linux
-```shell
-python3 -m app.models.train
-```
+- **Windows:**
+  ```shell
+  python -m main
+  ```
+- **macOS/Linux:**
+  ```shell
+  python3 -m main
+  ```
+  
+  Запускает игру с графическим интерфейсом (pygame). Можно выбрать режимы: человек против ИИ, ИИ против ИИ и т.д.
 
-В следующие разы достаточно активировать виртуальное окружение и запускать нужный модуль из корня проекта аналогично примеру выше.
+### Запуск обучения AlphaZero
 
-## TODO
+- **Windows:**
+  ```shell
+  python -m app.models_training.train
+  ```
+- **macOS/Linux:**
+  ```shell
+  python3 -m app.models_training.train
+  ```
+  
+  Запускает процесс обучения нейросети методом AlphaZero. Все параметры обучения задаются внутри train.py и game_config.py. Модели и логи сохраняются в app/models_training/models_files/ и app/models_training/logs/.
 
-- см start_menu.py
+### Запуск боёв ботов (AI vs AI)
 
-- сделать нормальное разбиение файлов по папкам
+- **Windows:**
+  ```shell
+  python -m bot_play
+  ```
+- **macOS/Linux:**
+  ```shell
+  python3 -m bot_play
+  ```
+  
+  Запускает серию игр между двумя ботами (например, AlphaZero против чистого MCTS) и выводит статистику побед.
+
+### Подсчёт уникальных состояний игры
+
+- **Windows:**
+  ```shell
+  python -m count_states
+  ```
+- **macOS/Linux:**
+  ```shell
+  python3 -m count_states
+  ```
+  
+  Считает количество уникальных состояний в дереве игры для заданных параметров поля.

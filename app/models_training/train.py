@@ -2,11 +2,11 @@ from __future__ import print_function
 import random
 import numpy as np
 from collections import defaultdict, deque
-from ..game import Game
-from ..mcts_alphazero import MCTSPlayer as MCTS_alphazero_player
-from ..mcts import MCTSPlayer as MCTS_pure_player
-from ..field import Field
-from ..policy_value_net_torch import PolicyValueNet
+from ..basic_game_core.game import Game
+from ..mcts.mcts_alphazero import MCTSPlayer as MCTS_alphazero_player
+from ..mcts.mcts import MCTSPlayer as MCTS_pure_player
+from ..basic_game_core.field import Field
+from .policy_value_net_torch import PolicyValueNet
 import os
 
 

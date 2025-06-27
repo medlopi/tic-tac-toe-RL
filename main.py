@@ -6,16 +6,16 @@ if sys.version_info < (3, 10):
 
 
 import pygame
-from app.game import Game
-from app.start_menu import StartMenu
-from app.interface import PyGameInterface
-from app.interface_features import PyGameInterfaceFeatures
-from app.game_config import MCTS_ITERATIONS, MCTS_AZ_ITERATIONS
-from app.field import Field
-from app.player import Player
-from app.mcts_alphazero import MCTSPlayer as MCTS_AZ_Player 
-from app.policy_value_net_torch import PolicyValueNet
-from app.mcts import MCTSPlayer as Pure_MCTS_Player
+from app.basic_game_core.game import Game
+from app.pygame_interface.start_menu import StartMenu
+from app.pygame_interface.interface import PyGameInterface
+from app.pygame_interface.interface_features import PyGameInterfaceFeatures
+from app.basic_game_core.config.game_config import MCTS_ITERATIONS, MCTS_AZ_ITERATIONS
+from app.basic_game_core.field import Field
+from app.basic_game_core.player import Player
+from app.mcts.mcts_alphazero import MCTSPlayer as MCTS_AZ_Player 
+from app.models_training.policy_value_net_torch import PolicyValueNet
+from app.mcts.mcts import MCTSPlayer as Pure_MCTS_Player
 
 def main():
     current_fullscreen_state = False

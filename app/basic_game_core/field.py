@@ -1,4 +1,4 @@
-from app.game_config import (
+from app.basic_game_core.config.game_config import (
     CONST_FIELD_HEIGHT,
     CONST_FIELD_WIDTH,
     CONST_STREAK_TO_WIN_SIZE,

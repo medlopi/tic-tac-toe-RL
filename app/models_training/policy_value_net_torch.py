@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from app.field import Field
-from app.node import Node
+from app.basic_game_core.field import Field
+from app.basic_game_core.node import Node
 import numpy as np
 
 

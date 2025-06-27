@@ -1,10 +1,10 @@
 #TODO d свойств -- ?
 
 
-from app.field import Field
-from app.node import Node
-from app.player import Player
-from app.game_config import MAX_FIELD_SIZE_FOR_SOLVER
+from app.basic_game_core.field import Field
+from app.basic_game_core.node import Node
+from app.basic_game_core.player import Player
+from app.basic_game_core.config.game_config import MAX_FIELD_SIZE_FOR_SOLVER
 from tqdm import tqdm
 from typing import Set
 import random

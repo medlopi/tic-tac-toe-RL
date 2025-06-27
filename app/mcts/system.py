@@ -3,7 +3,7 @@ import psutil
 import os
 import threading
 import numpy as np
-from app.node import Node
+from app.basic_game_core.node import Node
 
 
 class WrongMethodError(Exception):

@@ -1,5 +1,5 @@
-from app.field import Field, GameStates
-from app.player import Player
+from app.basic_game_core.field import Field, GameStates
+from app.basic_game_core.player import Player
 from typing import ForwardRef, Union
 import copy
 import numpy as np

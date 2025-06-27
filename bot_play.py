@@ -1,9 +1,9 @@
-from app.mcts_alphazero import MCTSPlayer as MCTS_AZ_player
-from app.mcts import MCTSPlayer as MCTS_player
-from app.policy_value_net_torch import PolicyValueNet
-from app.field import Field
+from app.mcts.mcts_alphazero import MCTSPlayer as MCTS_AZ_player
+from app.mcts.mcts import MCTSPlayer as MCTS_player
+from app.models_training.policy_value_net_torch import PolicyValueNet
+from app.basic_game_core.field import Field
 from collections import defaultdict
-from app.game import Game
+from app.basic_game_core.game import Game
 
 policy_value_net = PolicyValueNet(
     Field.WIDTH,

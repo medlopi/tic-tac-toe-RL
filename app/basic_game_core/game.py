@@ -1,9 +1,9 @@
-from app.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION, MAX_FIELD_SIZE_FOR_SOLVER
-from app.field import Field, GameStates
-from app.player import Player
-from app.node import Node
-from app.mcts import MCTSPlayer
-from app.solver import get_position_status_and_best_move
+from app.basic_game_core.config.game_config import PROGRAM_VERSION, PROGRAM_VERSION_DESCRIPTION, MAX_FIELD_SIZE_FOR_SOLVER
+from app.basic_game_core.field import Field, GameStates
+from app.basic_game_core.player import Player
+from app.basic_game_core.node import Node
+from app.mcts.mcts import MCTSPlayer
+from app.solver.solver import get_position_status_and_best_move
 import numpy as np
 
 from typing import ForwardRef

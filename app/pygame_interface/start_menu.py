@@ -1,6 +1,6 @@
 import pygame
 from pygame.locals import *
-from app.player import Player
+from app.basic_game_core.player import Player
 
 class StartMenu:
     def __init__(self, m=None, n=None, k=None, ai=None, mcts=None, player_symbol=None, is_fullscreen_start=False, initial_size=None, d=None):

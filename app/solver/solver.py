@@ -1,6 +1,6 @@
-from app.field import Field
-from app.player import Player
-from app.node import Node
+from app.basic_game_core.field import Field
+from app.basic_game_core.player import Player
+from app.basic_game_core.node import Node
 from enum import Enum
 import sys
 

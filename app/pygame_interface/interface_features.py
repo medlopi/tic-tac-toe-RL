@@ -1,9 +1,9 @@
 import pygame
 import threading
 from pygame.locals import *
-from app.game import Game
-from app.field import Field, GameStates
-from app.player import Player
+from app.basic_game_core.game import Game
+from app.basic_game_core.field import Field, GameStates
+from app.basic_game_core.player import Player
 
 COLOR_BG = (140, 140, 140)
 COLOR_FIELD_BG = (180, 180, 180)
