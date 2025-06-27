@@ -86,14 +86,14 @@ pip install -r app/basic_game_core/config/requirements.txt
 ### Запуск графической игры
 
 - **Windows:**
-  ```shell
-  python -m main
-  ```
+```shell
+python -m main
+```
 - **macOS/Linux:**
-  ```shell
-  python3 -m main
-  ```
-  
+```shell
+python3 -m main
+```
+
   Запускает игру с графическим интерфейсом (pygame). Можно выбрать режимы: человек против ИИ, ИИ против ИИ и т.д.
 
 ### Запуск обучения AlphaZero
@@ -112,11 +112,11 @@ pip install -r app/basic_game_core/config/requirements.txt
 ### Запуск боёв ботов (AI vs AI)
 
 - **Windows:**
-  ```shell
+```shell
   python -m bot_play
-  ```
+```
 - **macOS/Linux:**
-  ```shell
+```shell
   python3 -m bot_play
   ```
   

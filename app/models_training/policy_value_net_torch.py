@@ -16,43 +16,44 @@ def set_learning_rate(optimizer, lr):
 class Net(nn.Module):
     """policy-value network module"""
 
-    def __init__(self, board_width, board_height, count_features):
+    def __init__(
+        self,
+        board_width,
+        board_height,
+        count_features,
+        conv1_out=64,
+        conv2_out=128,
+        conv3_out=256,
+        act_conv1_out=8,
+        act_fc1_out=None,
+        val_conv1_out=4,
+        val_fc1_out=64,
+    ):
         super(Net, self).__init__()
 
         self.board_width = board_width
         self.board_height = board_height
         self.count_features = count_features
+        in_channels = 2 * count_features + 2
+
         # common layers
-        if count_features == 1:
-            self.conv1 = nn.Conv2d(4, 32, kernel_size=3, padding=1)
-            self.conv2 = nn.Conv2d(32, 64, kernel_size=3, padding=1)
-            self.conv3 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-        else:
-            self.conv1 = nn.Conv2d(2 * count_features + 2, 64, kernel_size=3, padding=1)
-            self.conv2 = nn.Conv2d(64, 128, kernel_size=3, padding=1)
-            self.conv3 = nn.Conv2d(128, 256, kernel_size=3, padding=1)
+        self.conv1 = nn.Conv2d(in_channels, conv1_out, kernel_size=3, padding=1)
+        self.conv2 = nn.Conv2d(conv1_out, conv2_out, kernel_size=3, padding=1)
+        self.conv3 = nn.Conv2d(conv2_out, conv3_out, kernel_size=3, padding=1)
+
         # action policy layers
-        if count_features == 1:
-            self.act_conv1 = nn.Conv2d(128, 4, kernel_size=1)
-            self.act_fc1 = nn.Linear(
-                4 * board_width * board_height, board_width * board_height
-            )
-        else:
-            self.act_conv1 = nn.Conv2d(256, 8, kernel_size=1)
+        self.act_conv1 = nn.Conv2d(conv3_out, act_conv1_out, kernel_size=1)
+        if act_fc1_out is None:
             count_different_figures = 1 << (count_features - 1)
-            self.act_fc1 = nn.Linear(
-                8 * board_width * board_height,
-                board_width * board_height * count_different_figures,
-            )
+            act_fc1_out = board_width * board_height * count_different_figures
+        self.act_fc1 = nn.Linear(
+            act_conv1_out * board_width * board_height, act_fc1_out
+        )
+
         # state value layers
-        if count_features == 1:
-            self.val_conv1 = nn.Conv2d(128, 2, kernel_size=1)
-            self.val_fc1 = nn.Linear(2 * board_width * board_height, 64)
-            self.val_fc2 = nn.Linear(64, 1)
-        else:
-            self.val_conv1 = nn.Conv2d(256, 4, kernel_size=1)
-            self.val_fc1 = nn.Linear(4 * board_width * board_height, 64)
-            self.val_fc2 = nn.Linear(64, 1)
+        self.val_conv1 = nn.Conv2d(conv3_out, val_conv1_out, kernel_size=1)
+        self.val_fc1 = nn.Linear(val_conv1_out * board_width * board_height, val_fc1_out)
+        self.val_fc2 = nn.Linear(val_fc1_out, 1)
 
     def forward(self, state_input):
         # common layers
@@ -64,14 +65,14 @@ class Net(nn.Module):
         if self.count_features == 1:
             x_act = x_act.view(-1, 4 * self.board_width * self.board_height)
         else:
-            x_act = x_act.view(-1, 8 * self.board_width * self.board_height)
+            x_act = x_act.view(-1, self.act_conv1.out_channels * self.board_width * self.board_height)
         x_act = F.log_softmax(self.act_fc1(x_act), dim=1)
         # state value layers
         x_val = F.relu(self.val_conv1(x))
         if self.count_features == 1:
             x_val = x_val.view(-1, 2 * self.board_width * self.board_height)
         else:
-            x_val = x_val.view(-1, 4 * self.board_width * self.board_height)
+            x_val = x_val.view(-1, self.val_conv1.out_channels * self.board_width * self.board_height)
         x_val = F.relu(self.val_fc1(x_val))
         x_val = F.tanh(self.val_fc2(x_val))
         return x_act, x_val
@@ -88,19 +89,34 @@ class PolicyValueNet:
         self.board_height = board_height
         self.count_features = count_features
         self.l2_const = 1e-4  # coef of l2 penalty
-        # the policy value net module
+
+        net_kwargs = {}
+        if model_file:
+            net_params = torch.load(model_file, map_location="cpu")
+            # Автоматически определяем размеры слоёв
+            net_kwargs = {
+                "conv1_out": net_params["conv1.weight"].shape[0],
+                "conv2_out": net_params["conv2.weight"].shape[0],
+                "conv3_out": net_params["conv3.weight"].shape[0],
+                "act_conv1_out": net_params["act_conv1.weight"].shape[0],
+                "act_fc1_out": net_params["act_fc1.weight"].shape[0],
+                "val_conv1_out": net_params["val_conv1.weight"].shape[0],
+                "val_fc1_out": net_params["val_fc1.weight"].shape[0],
+            }
+
         if self.use_gpu:
             self.policy_value_net = Net(
-                board_width, board_height, count_features
+                board_width, board_height, count_features, **net_kwargs
             ).cuda()
         else:
-            self.policy_value_net = Net(board_width, board_height, count_features)
+            self.policy_value_net = Net(
+                board_width, board_height, count_features, **net_kwargs
+            )
         self.optimizer = optim.Adam(
             self.policy_value_net.parameters(), weight_decay=self.l2_const
         )
 
         if model_file:
-            net_params = torch.load(model_file)
             self.policy_value_net.load_state_dict(net_params)
 
     def policy_value(self, state_batch):
