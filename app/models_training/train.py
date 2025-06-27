@@ -2,11 +2,13 @@ from __future__ import print_function
 import random
 import numpy as np
 from collections import defaultdict, deque
-from app.game import Game
-from app.mcts_alphazero import MCTSPlayer as MCTS_alphazero_player
-from app.mcts import MCTSPlayer as MCTS_pure_player
-from app.field import Field
-from app.policy_value_net_torch import PolicyValueNet
+from ..game import Game
+from ..mcts_alphazero import MCTSPlayer as MCTS_alphazero_player
+from ..mcts import MCTSPlayer as MCTS_pure_player
+from ..field import Field
+from ..policy_value_net_torch import PolicyValueNet
+from ..game_config import CONST_FIELD_HEIGHT, CONST_FIELD_WIDTH, CONST_STREAK_TO_WIN_SIZE
+import os
 
 
 class TrainPipeline():
@@ -46,6 +48,9 @@ class TrainPipeline():
             self.policy_value_net = PolicyValueNet(self.board_width,
                                                    self.board_height,
                                                    self.n_features)
+            
+        self.file_name = f"{self.board_width}x{self.board_height}x{self.n_in_row}x{self.n_features}"  # чтобы быстро менять названия
+
         self.mcts_player = MCTS_alphazero_player(
             self.policy_value_net.policy_value_function,
             self.puct_constant,
@@ -182,12 +187,12 @@ class TrainPipeline():
                 if (i+1) % self.check_freq == 0:
                     print("current self-play batch: {}".format(i+1))
                     win_ratio = self.policy_evaluate()
-                    self.policy_value_net.save_model(f'./current_policy_{self.board_width}x{self.board_height}x{self.n_in_row}x{self.n_features}.model')
+                    self.policy_value_net.save_model(f'./app/models_training/models_files/current_policy_{self.file_name}.model')
                     if win_ratio > self.best_win_ratio:
                         print("New best policy!!!!!!!!")
                         self.best_win_ratio = win_ratio
                         # update the best_policy
-                        self.policy_value_net.save_model(f'./best_policy_{self.board_width}x{self.board_height}x{self.n_in_row}x{self.n_features}.model')
+                        self.policy_value_net.save_model(f'./app/models_training/models_files/best_policy_{self.file_name}.model')
                         if (self.best_win_ratio == 1.0 and
                                 self.pure_mcts_playout_num < 5000):
                             self.pure_mcts_playout_num += 1000
@@ -201,10 +206,21 @@ class TrainPipeline():
 if __name__ == '__main__':
     training_pipeline = TrainPipeline()
     losses, entrs = training_pipeline.run()
-    f = open(f"{CONST_FIELD_HEIGHT}x{CONST_FIELD_WIDTH}x{CONST_STREAK_TO_WIN_SIZE}-logs", 'w')
+    logs_dir = os.path.join(os.path.dirname(__file__), 'logs')
+    os.makedirs(logs_dir, exist_ok=True)
+    log_filename = f"logs_{training_pipeline.file_name}.txt"
+    log_path = os.path.join(logs_dir, log_filename)
+
+    # в файл
+    with open(log_path, 'w') as f:
+        print("LOSS", file=f)
+        print(losses, file=f)
+        print("ENTRS", file=f)
+        print(entrs, file=f)
+
+    # в консоль
     print("LOSS")
     print(losses)
-    print(losses, file=f)
     print("ENTRS")
     print(entrs)
-    print(entrs, file=f)
+    

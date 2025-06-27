@@ -49,32 +49,35 @@ source ./.venv/bin/activate
 pip install -r requirements.txt
 ```
 
-3. Чтобы запустить игру:
+3. Чтобы запустить игру (или любой другой модуль):
 
-### Windows
+**Важно:** Все команды запуска выполняйте из корня проекта! Если файл находится в подпапке, используйте запуск через `-m` и относительный путь через точку.
+
+### Примеры:
+
+#### Запуск основной игры
+
+##### Windows
 ```shell
-python main.py
+python -m main
+```
+##### macOS/Linux
+```shell
+python3 -m main
 ```
 
-### macOS/Linux
+#### Запуск тренировки (пример)
+
+##### Windows
 ```shell
-python3 main.py
+python -m app.models.train
+```
+##### macOS/Linux
+```shell
+python3 -m app.models.train
 ```
 
-В следующие разы достаточно активировать виртуальное окружение и запустить игру:
-
-### Windows
-```shell
-.venv\Scripts\activate
-python main.py
-```
-
-### macOS/Linux
-```shell
-source ./.venv/bin/activate
-python3 main.py
-```
-
+В следующие разы достаточно активировать виртуальное окружение и запускать нужный модуль из корня проекта аналогично примеру выше.
 
 ## TODO
 
