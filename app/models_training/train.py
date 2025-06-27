@@ -7,7 +7,6 @@ from ..mcts_alphazero import MCTSPlayer as MCTS_alphazero_player
 from ..mcts import MCTSPlayer as MCTS_pure_player
 from ..field import Field
 from ..policy_value_net_torch import PolicyValueNet
-from ..game_config import CONST_FIELD_HEIGHT, CONST_FIELD_WIDTH, CONST_STREAK_TO_WIN_SIZE
 import os
 
 
@@ -171,17 +170,34 @@ class TrainPipeline():
 
     def run(self):
         """run the training pipeline"""
+
+        # сохраняем логи обучения
+        stats_dir = os.path.join(os.path.dirname(__file__), 'logs', self.file_name)
+        os.makedirs(stats_dir, exist_ok=True)
+
+        # только эти умеем 
+        loss_filename = f"loss_{self.file_name}.txt"
+        loss_path = os.path.join(stats_dir, loss_filename)
+        entropy_filename = f"entropy_{self.file_name}.txt"
+        entropy_path = os.path.join(stats_dir, entropy_filename)
+
         losses = []
         entrs = []
         try:
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
-                print("batch i:{}, episode_len:{}".format(
-                        i+1, self.episode_len))
+                print("batch i:{}, episode_len:{}".format(i+1, self.episode_len))
                 if len(self.data_buffer) > self.batch_size:
                     loss, entropy = self.policy_update()
                     losses.append(loss)
                     entrs.append(entropy)
+
+                    # Записываем только если loss и entropy определены
+                    with open(loss_path, 'a') as f:
+                        print(f"{i + 1}\t{self.episode_len}\t{loss}", file=f)
+                    with open(entropy_path, 'a') as f:
+                        print(f"{i + 1}\t{self.episode_len}\t{entropy}", file=f)
+
                 # check the performance of the current model,
                 # and save the model params
                 if (i+1) % self.check_freq == 0:
@@ -206,19 +222,7 @@ class TrainPipeline():
 if __name__ == '__main__':
     training_pipeline = TrainPipeline()
     losses, entrs = training_pipeline.run()
-    logs_dir = os.path.join(os.path.dirname(__file__), 'logs')
-    os.makedirs(logs_dir, exist_ok=True)
-    log_filename = f"logs_{training_pipeline.file_name}.txt"
-    log_path = os.path.join(logs_dir, log_filename)
 
-    # в файл
-    with open(log_path, 'w') as f:
-        print("LOSS", file=f)
-        print(losses, file=f)
-        print("ENTRS", file=f)
-        print(entrs, file=f)
-
-    # в консоль
     print("LOSS")
     print(losses)
     print("ENTRS")
