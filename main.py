@@ -57,10 +57,11 @@ def main():
             )
 
             if ai_enabled or mcts_vs_dqn_enabled:
-                model_file = f"policy_{m}x{n}x{k}x{d}.model"
-                print(f"Попытка загрузить модель AlphaZero: {model_file}")
+                model_file_name = f"policy_{m}x{n}x{k}x{d}.model"
+                path_to_model_file = f"app/models_training/models_files/{model_file_name}"
+                print(f"Попытка загрузить модель AlphaZero: {model_file_name}")
                 try:
-                    policy_value_net = PolicyValueNet(m, n, d, model_file=model_file)
+                    policy_value_net = PolicyValueNet(m, n, d, model_file=path_to_model_file)
                     az_model_player = MCTS_AZ_Player(
                         policy_value_net.policy_value_function,
                         puct_constant=5,
@@ -69,7 +70,7 @@ def main():
                     )
                     print("AlphaZero модель загружена.")
                 except FileNotFoundError:
-                    print(f"ОШИБКА: Файл модели AlphaZero '{model_file}' не найден!")
+                    print(f"ОШИБКА: Файл модели AlphaZero '{model_file_name}' по адресу '{path_to_model_file}' не найден!")
                     if ai_enabled and not mcts_enabled_flag and not mcts_vs_dqn_enabled:
                         print(
                             "AlphaZero была единственным ИИ. Переключение на чистый MCTS как основной ИИ."
