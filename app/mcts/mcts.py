@@ -1,6 +1,7 @@
 from app.basic_game_core.field import Field, GameStates
 from app.basic_game_core.node import Node
 from app.basic_game_core.player import Player
+
 # from app.system import measure_mcts_performance
 import numpy as np
 
@@ -45,13 +46,10 @@ class MCTS:
             if game_state != GameStates.CONTINUE:
                 winner = node.define_winner(game_state)
                 break
-             
-            action = max(
-                rollout_policy_function(node),
-                key=lambda action: action[1]
-            )[0]
+
+            action = max(rollout_policy_function(node), key=lambda action: action[1])[0]
             node = Node(node, action)
-            
+
         if winner == Player.Type.NONE:  # tie
             return 0
         else:
@@ -61,8 +59,9 @@ class MCTS:
     def get_move(self) -> Field.Cell:
         for _ in range(self._playout_number):
             self._run_playout()
-        return max(self._root._children.items(),
-                   key=lambda child: child[1]._visits_number)[0]
+        return max(
+            self._root._children.items(), key=lambda child: child[1]._visits_number
+        )[0]
 
     def move_and_update(self, move: Field.Cell) -> None:
         if move in self._root._children:
@@ -82,7 +81,6 @@ class MCTSPlayer:
 
     def get_move(self) -> Field.Cell:
         return self.mcts.get_move()
-    
+
     def move_and_update(self, move: Field.Cell) -> None:
         self.mcts.move_and_update(move)
-        

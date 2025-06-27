@@ -10,11 +10,12 @@ import numpy as np
 def set_learning_rate(optimizer, lr):
     """Sets the learning rate to the given value"""
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group["lr"] = lr
 
 
 class Net(nn.Module):
     """policy-value network module"""
+
     def __init__(self, board_width, board_height, count_features):
         super(Net, self).__init__()
 
@@ -34,24 +35,23 @@ class Net(nn.Module):
         if count_features == 1:
             self.act_conv1 = nn.Conv2d(128, 4, kernel_size=1)
             self.act_fc1 = nn.Linear(
-                4*board_width*board_height,
-                board_width*board_height
+                4 * board_width * board_height, board_width * board_height
             )
         else:
             self.act_conv1 = nn.Conv2d(256, 8, kernel_size=1)
             count_different_figures = 1 << (count_features - 1)
             self.act_fc1 = nn.Linear(
-                8*board_width*board_height,
-                board_width*board_height*count_different_figures
+                8 * board_width * board_height,
+                board_width * board_height * count_different_figures,
             )
         # state value layers
         if count_features == 1:
             self.val_conv1 = nn.Conv2d(128, 2, kernel_size=1)
-            self.val_fc1 = nn.Linear(2*board_width*board_height, 64)
+            self.val_fc1 = nn.Linear(2 * board_width * board_height, 64)
             self.val_fc2 = nn.Linear(64, 1)
         else:
             self.val_conv1 = nn.Conv2d(256, 4, kernel_size=1)
-            self.val_fc1 = nn.Linear(4*board_width*board_height, 64)
+            self.val_fc1 = nn.Linear(4 * board_width * board_height, 64)
             self.val_fc2 = nn.Linear(64, 1)
 
     def forward(self, state_input):
@@ -62,25 +62,27 @@ class Net(nn.Module):
         # action policy layers
         x_act = F.relu(self.act_conv1(x))
         if self.count_features == 1:
-            x_act = x_act.view(-1, 4*self.board_width*self.board_height)
+            x_act = x_act.view(-1, 4 * self.board_width * self.board_height)
         else:
-            x_act = x_act.view(-1, 8*self.board_width*self.board_height)
+            x_act = x_act.view(-1, 8 * self.board_width * self.board_height)
         x_act = F.log_softmax(self.act_fc1(x_act), dim=1)
         # state value layers
         x_val = F.relu(self.val_conv1(x))
         if self.count_features == 1:
-            x_val = x_val.view(-1, 2*self.board_width*self.board_height)
+            x_val = x_val.view(-1, 2 * self.board_width * self.board_height)
         else:
-            x_val = x_val.view(-1, 4*self.board_width*self.board_height)
+            x_val = x_val.view(-1, 4 * self.board_width * self.board_height)
         x_val = F.relu(self.val_fc1(x_val))
         x_val = F.tanh(self.val_fc2(x_val))
         return x_act, x_val
 
 
-class PolicyValueNet():
-    """policy-value network """
-    def __init__(self, board_width, board_height, count_features,
-                 model_file=None, use_gpu=False):
+class PolicyValueNet:
+    """policy-value network"""
+
+    def __init__(
+        self, board_width, board_height, count_features, model_file=None, use_gpu=False
+    ):
         self.use_gpu = use_gpu
         self.board_width = board_width
         self.board_height = board_height
@@ -88,11 +90,14 @@ class PolicyValueNet():
         self.l2_const = 1e-4  # coef of l2 penalty
         # the policy value net module
         if self.use_gpu:
-            self.policy_value_net = Net(board_width, board_height, count_features).cuda()
+            self.policy_value_net = Net(
+                board_width, board_height, count_features
+            ).cuda()
         else:
             self.policy_value_net = Net(board_width, board_height, count_features)
-        self.optimizer = optim.Adam(self.policy_value_net.parameters(),
-                                    weight_decay=self.l2_const)
+        self.optimizer = optim.Adam(
+            self.policy_value_net.parameters(), weight_decay=self.l2_const
+        )
 
         if model_file:
             net_params = torch.load(model_file)
@@ -104,7 +109,7 @@ class PolicyValueNet():
         output: a batch of action probabilities and state values
         """
         if self.use_gpu:
-            state_batch = torch.tensor(state_batch, dtype=torch.float32, device='cuda')
+            state_batch = torch.tensor(state_batch, dtype=torch.float32, device="cuda")
             log_act_probs, value = self.policy_value_net(state_batch)
             act_probs = np.exp(log_act_probs.data.cpu().numpy())
             return act_probs, value.data.cpu().numpy()
@@ -118,15 +123,19 @@ class PolicyValueNet():
         available_moves = node.get_available_moves()
         count_different_figures = 1 << (Field.COUNT_FEATURES - 1)
         legal_positions = [
-            (move.figure % count_different_figures) * Field.WIDTH * Field.HEIGHT + move.row * Field.WIDTH + move.col 
+            (move.figure % count_different_figures) * Field.WIDTH * Field.HEIGHT
+            + move.row * Field.WIDTH
+            + move.col
             for move in available_moves
         ]
-        current_state = np.ascontiguousarray(node.current_state().reshape(
-            -1, 2 * self.count_features + 2, self.board_width, self.board_height
-        ))
+        current_state = np.ascontiguousarray(
+            node.current_state().reshape(
+                -1, 2 * self.count_features + 2, self.board_width, self.board_height
+            )
+        )
         if self.use_gpu:
             log_action_probs, score = self.policy_value_net(
-                torch.tensor(current_state, dtype=torch.float32, device='cuda')
+                torch.tensor(current_state, dtype=torch.float32, device="cuda")
             )
             action_probs = np.exp(log_action_probs.data.cpu().numpy().flatten())
         else:
@@ -136,16 +145,17 @@ class PolicyValueNet():
             action_probs = np.exp(log_action_probs.data.numpy().flatten())
         actions_with_probs = list(zip(available_moves, action_probs[legal_positions]))
         score = score.data[0][0]
-      
-        return actions_with_probs, score
 
+        return actions_with_probs, score
 
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):
         """perform a training step"""
         if self.use_gpu:
-            state_batch = torch.tensor(state_batch, dtype=torch.float32, device='cuda')
-            mcts_probs = torch.tensor(mcts_probs, dtype=torch.float32, device='cuda')
-            winner_batch = torch.tensor(winner_batch, dtype=torch.float32, device='cuda')
+            state_batch = torch.tensor(state_batch, dtype=torch.float32, device="cuda")
+            mcts_probs = torch.tensor(mcts_probs, dtype=torch.float32, device="cuda")
+            winner_batch = torch.tensor(
+                winner_batch, dtype=torch.float32, device="cuda"
+            )
         else:
             state_batch = torch.as_tensor(np.array(state_batch), dtype=torch.float32)
             mcts_probs = torch.as_tensor(np.array(mcts_probs), dtype=torch.float32)
@@ -161,15 +171,13 @@ class PolicyValueNet():
         # define the loss = (z - v)^2 - pi^T * log(p) + c||theta||^2
         # Note: the L2 penalty is incorporated in optimizer
         value_loss = F.mse_loss(value.view(-1), winner_batch)
-        policy_loss = -torch.mean(torch.sum(mcts_probs*log_act_probs, 1))
+        policy_loss = -torch.mean(torch.sum(mcts_probs * log_act_probs, 1))
         loss = value_loss + policy_loss
         # backward and optimize
         loss.backward()
         self.optimizer.step()
         # calc policy entropy, for monitoring only
-        entropy = -torch.mean(
-                torch.sum(torch.exp(log_act_probs) * log_act_probs, 1)
-                )
+        entropy = -torch.mean(torch.sum(torch.exp(log_act_probs) * log_act_probs, 1))
         return loss.item(), entropy.item()
 
     def get_policy_param(self):
@@ -177,6 +185,6 @@ class PolicyValueNet():
         return net_params
 
     def save_model(self, model_file):
-        """ save model params to file """
+        """save model params to file"""
         net_params = self.get_policy_param()  # get model params
         torch.save(net_params, model_file)

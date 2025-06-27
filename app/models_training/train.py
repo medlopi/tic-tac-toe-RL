@@ -10,14 +10,14 @@ from .policy_value_net_torch import PolicyValueNet
 import os
 
 
-class TrainPipeline():
+class TrainPipeline:
     def __init__(self, init_model=None):
         # params of the board and the game
         self.board_width = Field.WIDTH
         self.board_height = Field.HEIGHT
         self.n_in_row = Field.STREAK_TO_WIN
         self.n_features = Field.COUNT_FEATURES
-        
+
         # training params
         self.learn_rate = 2e-3
         self.lr_multiplier = 1.0  # adaptively adjust the learning rate based on KL
@@ -38,23 +38,25 @@ class TrainPipeline():
         self.pure_mcts_playout_num = 1000
         if init_model:
             # start training from an initial policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   self.n_features,
-                                                   model_file=init_model)
+            self.policy_value_net = PolicyValueNet(
+                self.board_width,
+                self.board_height,
+                self.n_features,
+                model_file=init_model,
+            )
         else:
             # start training from a new policy-value net
-            self.policy_value_net = PolicyValueNet(self.board_width,
-                                                   self.board_height,
-                                                   self.n_features)
-            
+            self.policy_value_net = PolicyValueNet(
+                self.board_width, self.board_height, self.n_features
+            )
+
         self.file_name = f"{self.board_width}x{self.board_height}x{self.n_in_row}x{self.n_features}"  # чтобы быстро менять названия
 
         self.mcts_player = MCTS_alphazero_player(
             self.policy_value_net.policy_value_function,
             self.puct_constant,
             self.playout_number,
-            is_selfplay=True
+            is_selfplay=True,
         )
         self.game = Game(self.mcts_player)
 
@@ -71,11 +73,11 @@ class TrainPipeline():
 
             for k in [1, 2, 3]:
                 equi_state = np.array([np.rot90(s, k) for s in state])
-                equi_prob  = np.array([np.rot90(p, k) for p in prob_3d])
+                equi_prob = np.array([np.rot90(p, k) for p in prob_3d])
                 extend_data.append((equi_state, equi_prob.flatten(), winner))
 
                 equi_state = np.array([np.fliplr(s) for s in equi_state])
-                equi_prob  = np.array([np.fliplr(p) for p in equi_prob])
+                equi_prob = np.array([np.fliplr(p) for p in equi_prob])
                 extend_data.append((equi_state, equi_prob.flatten(), winner))
 
         return extend_data
@@ -84,8 +86,7 @@ class TrainPipeline():
         """collect self-play data for training"""
         for i in range(n_games):
             winner, play_data = self.game.start_self_play(
-                self.mcts_player,
-                self.temperature_contant
+                self.mcts_player, self.temperature_contant
             )
             play_data = list(play_data)[:]
             self.episode_len = len(play_data)
@@ -102,14 +103,17 @@ class TrainPipeline():
         old_probs, old_v = self.policy_value_net.policy_value(state_batch)
         for i in range(self.epochs):
             loss, entropy = self.policy_value_net.train_step(
-                    state_batch,
-                    mcts_probs_batch,
-                    winner_batch,
-                    self.learn_rate*self.lr_multiplier)
+                state_batch,
+                mcts_probs_batch,
+                winner_batch,
+                self.learn_rate * self.lr_multiplier,
+            )
             new_probs, new_v = self.policy_value_net.policy_value(state_batch)
-            kl = np.mean(np.sum(old_probs * (
-                    np.log(old_probs + 1e-10) - np.log(new_probs + 1e-10)),
-                    axis=1)
+            kl = np.mean(
+                np.sum(
+                    old_probs * (np.log(old_probs + 1e-10) - np.log(new_probs + 1e-10)),
+                    axis=1,
+                )
             )
             if kl > self.kl_targ * 4:  # early stopping if D_KL diverges badly
                 break
@@ -119,24 +123,29 @@ class TrainPipeline():
         elif kl < self.kl_targ / 2 and self.lr_multiplier < 10:
             self.lr_multiplier *= 1.5
 
-        explained_var_old = (1 -
-                             np.var(np.array(winner_batch) - old_v.flatten()) /
-                             np.var(np.array(winner_batch)))
-        explained_var_new = (1 -
-                             np.var(np.array(winner_batch) - new_v.flatten()) /
-                             np.var(np.array(winner_batch)))
-        print(("kl:{:.5f},"
-               "lr_multiplier:{:.3f},"
-               "loss:{},"
-               "entropy:{},"
-               "explained_var_old:{:.3f},"
-               "explained_var_new:{:.3f}"
-               ).format(kl,
-                        self.lr_multiplier,
-                        loss,
-                        entropy,
-                        explained_var_old,
-                        explained_var_new))
+        explained_var_old = 1 - np.var(
+            np.array(winner_batch) - old_v.flatten()
+        ) / np.var(np.array(winner_batch))
+        explained_var_new = 1 - np.var(
+            np.array(winner_batch) - new_v.flatten()
+        ) / np.var(np.array(winner_batch))
+        print(
+            (
+                "kl:{:.5f},"
+                "lr_multiplier:{:.3f},"
+                "loss:{},"
+                "entropy:{},"
+                "explained_var_old:{:.3f},"
+                "explained_var_new:{:.3f}"
+            ).format(
+                kl,
+                self.lr_multiplier,
+                loss,
+                entropy,
+                explained_var_old,
+                explained_var_new,
+            )
+        )
         return loss, entropy
 
     def policy_evaluate(self, n_games=10):
@@ -148,34 +157,33 @@ class TrainPipeline():
             self.policy_value_net.policy_value_function,
             self.puct_constant,
             self.playout_number,
-            is_selfplay=False
+            is_selfplay=False,
         )
         pure_mcts_player = MCTS_pure_player(
-            self.puct_constant,
-            self.pure_mcts_playout_num
+            self.puct_constant, self.pure_mcts_playout_num
         )
         win_cnt = defaultdict(int)
         for i in range(n_games):
             winner = self.game.start_bot_play(
-                current_mcts_player,
-                pure_mcts_player,
-                start_player=i % 2
+                current_mcts_player, pure_mcts_player, start_player=i % 2
             )
             win_cnt[winner] += 1
-        win_ratio = 1.0*(win_cnt[1] + 0.5*win_cnt[-1]) / n_games
-        print("num_playouts:{}, win: {}, lose: {}, tie:{}".format(
-                self.pure_mcts_playout_num,
-                win_cnt[1], win_cnt[0], win_cnt[-1]))
+        win_ratio = 1.0 * (win_cnt[1] + 0.5 * win_cnt[-1]) / n_games
+        print(
+            "num_playouts:{}, win: {}, lose: {}, tie:{}".format(
+                self.pure_mcts_playout_num, win_cnt[1], win_cnt[0], win_cnt[-1]
+            )
+        )
         return win_ratio
 
     def run(self):
         """run the training pipeline"""
 
         # сохраняем логи обучения
-        stats_dir = os.path.join(os.path.dirname(__file__), 'logs', self.file_name)
+        stats_dir = os.path.join(os.path.dirname(__file__), "logs", self.file_name)
         os.makedirs(stats_dir, exist_ok=True)
 
-        # только эти умеем 
+        # только эти умеем
         loss_filename = f"loss_{self.file_name}.txt"
         loss_path = os.path.join(stats_dir, loss_filename)
         entropy_filename = f"entropy_{self.file_name}.txt"
@@ -186,40 +194,46 @@ class TrainPipeline():
         try:
             for i in range(self.game_batch_num):
                 self.collect_selfplay_data(self.play_batch_size)
-                print("batch i:{}, episode_len:{}".format(i+1, self.episode_len))
+                print("batch i:{}, episode_len:{}".format(i + 1, self.episode_len))
                 if len(self.data_buffer) > self.batch_size:
                     loss, entropy = self.policy_update()
                     losses.append(loss)
                     entrs.append(entropy)
 
                     # Записываем только если loss и entropy определены
-                    with open(loss_path, 'a') as f:
+                    with open(loss_path, "a") as f:
                         print(f"{i + 1}\t{self.episode_len}\t{loss}", file=f)
-                    with open(entropy_path, 'a') as f:
+                    with open(entropy_path, "a") as f:
                         print(f"{i + 1}\t{self.episode_len}\t{entropy}", file=f)
 
                 # check the performance of the current model,
                 # and save the model params
-                if (i+1) % self.check_freq == 0:
-                    print("current self-play batch: {}".format(i+1))
+                if (i + 1) % self.check_freq == 0:
+                    print("current self-play batch: {}".format(i + 1))
                     win_ratio = self.policy_evaluate()
-                    self.policy_value_net.save_model(f'./app/models_training/models_files/current_policy_{self.file_name}.model')
+                    self.policy_value_net.save_model(
+                        f"./app/models_training/models_files/current_policy_{self.file_name}.model"
+                    )
                     if win_ratio > self.best_win_ratio:
                         print("New best policy!!!!!!!!")
                         self.best_win_ratio = win_ratio
                         # update the best_policy
-                        self.policy_value_net.save_model(f'./app/models_training/models_files/best_policy_{self.file_name}.model')
-                        if (self.best_win_ratio == 1.0 and
-                                self.pure_mcts_playout_num < 5000):
+                        self.policy_value_net.save_model(
+                            f"./app/models_training/models_files/best_policy_{self.file_name}.model"
+                        )
+                        if (
+                            self.best_win_ratio == 1.0
+                            and self.pure_mcts_playout_num < 5000
+                        ):
                             self.pure_mcts_playout_num += 1000
                             self.best_win_ratio = 0.0
         except KeyboardInterrupt:
-            print('\n\rquit')
+            print("\n\rquit")
             return losses, entrs
         return losses, entrs
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     training_pipeline = TrainPipeline()
     losses, entrs = training_pipeline.run()
 
@@ -227,4 +241,3 @@ if __name__ == '__main__':
     print(losses)
     print("ENTRS")
     print(entrs)
-    

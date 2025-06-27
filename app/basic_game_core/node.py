@@ -4,10 +4,9 @@ from typing import ForwardRef, Union
 import copy
 import numpy as np
 
-DIRECTIONS = tuple([
-    (-1, 0), (-1, 1), (0, 1), (1, 1),
-    (1, 0), (1, -1), (0, -1), (-1, -1)
-])
+DIRECTIONS = tuple(
+    [(-1, 0), (-1, 1), (0, 1), (1, 1), (1, 0), (1, -1), (0, -1), (-1, -1)]
+)
 
 
 class Node:
@@ -23,7 +22,7 @@ class Node:
             self.who_moves: Player.Type = Player.Type.CROSS
             self.field: list[list[int]] = [
                 [-1 for _ in range(Field.WIDTH)] for _ in range(Field.HEIGHT)
-            ] 
+            ]
             self.free_cells_count: int = Field.WIDTH * Field.HEIGHT
             self.last_move: Field.Cell = Field.Cell()
             self.available_figures = set(range(1 << Field.COUNT_FEATURES))
@@ -47,28 +46,38 @@ class Node:
             depth += 1
 
             current = current._parent
-            
+
         return depth
 
     def get_node_value(self, puct_constant: float) -> float:
-        self._exploration_bonus = (puct_constant * self._prior_probability *
-            np.sqrt(self._parent._visits_number) / (1 + self._visits_number))
+        self._exploration_bonus = (
+            puct_constant
+            * self._prior_probability
+            * np.sqrt(self._parent._visits_number)
+            / (1 + self._visits_number)
+        )
         return self._estimate_value + self._exploration_bonus
-    
+
     def select_action(self, puct_constant) -> tuple[Field.Cell, ForwardRef("Node")]:
-        return max(self._children.items(),
-                   key=lambda child: child[1].get_node_value(puct_constant))
-    
+        return max(
+            self._children.items(),
+            key=lambda child: child[1].get_node_value(puct_constant),
+        )
+
     def update_node(self, leaf_value: float) -> None:
         self._visits_number += 1
-        self._estimate_value += (leaf_value - self._estimate_value) / self._visits_number
+        self._estimate_value += (
+            leaf_value - self._estimate_value
+        ) / self._visits_number
 
     def update_all_ancestors_recursively(self, leaf_value: float) -> None:
         if self._parent:
             self._parent.update_all_ancestors_recursively(-leaf_value)
         self.update_node(leaf_value)
 
-    def expand_node(self, actions_with_prior_probabilities: list[tuple[Field.Cell, float]]) -> None:
+    def expand_node(
+        self, actions_with_prior_probabilities: list[tuple[Field.Cell, float]]
+    ) -> None:
         for action, probability in actions_with_prior_probabilities:
             if action not in self._children:
                 self._children[action] = Node(self, action, probability)
@@ -78,7 +87,7 @@ class Node:
 
     def is_root(self) -> bool:
         return self._parent is None
-    
+
     def get_available_moves(self) -> list[Field.Cell]:
         count_different_figures = 1 << (Field.COUNT_FEATURES - 1)
         shift = count_different_figures * self.who_moves.value
@@ -99,11 +108,11 @@ class Node:
 
         if self.last_move.row == -1:
             return False
-        
-        last_move_cell = f'{self.field[self.last_move.row][self.last_move.col]:0{Field.COUNT_FEATURES}b}'
-        
+
+        last_move_cell = f"{self.field[self.last_move.row][self.last_move.col]:0{Field.COUNT_FEATURES}b}"
+
         for i in range(Field.COUNT_FEATURES):
-        
+
             for direction in range(4):
                 count = 1
 
@@ -112,10 +121,11 @@ class Node:
                     col = self.last_move.col + DIRECTIONS[direction][1]
 
                     while (
-                        0 <= row < Field.HEIGHT and
-                        0 <= col < Field.WIDTH and
-                        self.field[row][col] != -1 and 
-                        f'{self.field[row][col]:0{Field.COUNT_FEATURES}b}'[i] == last_move_cell[i]
+                        0 <= row < Field.HEIGHT
+                        and 0 <= col < Field.WIDTH
+                        and self.field[row][col] != -1
+                        and f"{self.field[row][col]:0{Field.COUNT_FEATURES}b}"[i]
+                        == last_move_cell[i]
                     ):
                         count += 1
                         row += DIRECTIONS[direction][0]
@@ -125,7 +135,7 @@ class Node:
 
                 if count >= Field.STREAK_TO_WIN:
                     return True
-                
+
         return False
 
     def check_game_state(self) -> GameStates:
@@ -165,7 +175,7 @@ class Node:
                 if figure == -1:
                     continue
 
-                binary = f'{figure:0{d}b}'
+                binary = f"{figure:0{d}b}"
                 shift = int(int(binary[0]) != current)
                 state[shift, i, j] = 1.0
 
@@ -185,7 +195,7 @@ class Node:
             return state[:, ::-1, :]
         else:
             return state
-    
+
     def define_winner(self, game_state: GameStates) -> Union[Player.Type, None]:
         if game_state != GameStates.CONTINUE:
             if game_state == GameStates.CROSS_WON:

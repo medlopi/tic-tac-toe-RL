@@ -32,7 +32,7 @@ class MCTS:
             node.expand_node(actions_with_probs)
         else:
             winner = node.define_winner(game_state)
-            
+
             if winner == node.who_moves:
                 leaf_value = 1
             elif winner == Player.Type.NONE:
@@ -47,7 +47,8 @@ class MCTS:
             self._run_playout()
 
         actions_with_visits = [
-            (action, node._visits_number) for action, node in self._root._children.items()
+            (action, node._visits_number)
+            for action, node in self._root._children.items()
         ]
         actions, visits = zip(*actions_with_visits)
         action_probs = softmax(
@@ -66,8 +67,13 @@ class MCTS:
 
 class MCTSPlayer:
 
-    def __init__(self, policy_value_function, puct_constant: float,
-                 playout_number: int, is_selfplay: bool):
+    def __init__(
+        self,
+        policy_value_function,
+        puct_constant: float,
+        playout_number: int,
+        is_selfplay: bool,
+    ):
         self.mcts = MCTS(policy_value_function, puct_constant, playout_number)
         self._is_selfplay = is_selfplay
 
@@ -76,13 +82,15 @@ class MCTSPlayer:
 
     def move_and_update(self, move: Field.Cell) -> None:
         self.mcts.move_and_update(move)
-    
+
     def get_move(self, temperature_contant: float = 1e-3, return_prob: bool = False):
         count_different_figures = 1 << (Field.COUNT_FEATURES - 1)
-        move_probs = np.zeros(count_different_figures*Field.HEIGHT*Field.WIDTH)
+        move_probs = np.zeros(count_different_figures * Field.HEIGHT * Field.WIDTH)
         moves, probs = self.mcts.get_move_probs(temperature_contant)
         moves = [
-            (cell.figure % count_different_figures) * Field.WIDTH * Field.HEIGHT + cell.row * Field.WIDTH + cell.col 
+            (cell.figure % count_different_figures) * Field.WIDTH * Field.HEIGHT
+            + cell.row * Field.WIDTH
+            + cell.col
             for cell in moves
         ]
         move_probs[moves] = probs
@@ -91,12 +99,12 @@ class MCTSPlayer:
             # add Dirichlet Noise for exploration
             move = np.random.choice(
                 moves,
-                p=0.75*probs + 0.25*np.random.dirichlet(0.3*np.ones(len(probs)))
+                p=0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs))),
             )
             move_cell = Field.Cell(
-                move % (Field.WIDTH * Field.HEIGHT) // Field.WIDTH, 
+                move % (Field.WIDTH * Field.HEIGHT) // Field.WIDTH,
                 move % Field.WIDTH,
-                move // (Field.WIDTH * Field.HEIGHT)
+                move // (Field.WIDTH * Field.HEIGHT),
             )
             if self.mcts._root.who_moves == Player.Type.NAUGHT:
                 move_cell.figure += count_different_figures
@@ -106,9 +114,9 @@ class MCTSPlayer:
             # equivalent to choosing the move with the highest prob
             move = np.random.choice(moves, p=probs)
             move_cell = Field.Cell(
-                move % (Field.WIDTH * Field.HEIGHT) // Field.WIDTH, 
+                move % (Field.WIDTH * Field.HEIGHT) // Field.WIDTH,
                 move % Field.WIDTH,
-                move // (Field.WIDTH * Field.HEIGHT)
+                move // (Field.WIDTH * Field.HEIGHT),
             )
             if self.mcts._root.who_moves == Player.Type.NAUGHT:
                 move_cell.figure += count_different_figures
