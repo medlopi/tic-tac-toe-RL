@@ -1,5 +1,6 @@
 # tic-tac-toe RL
 
+![License](https://img.shields.io/badge/license-MIT-green)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Linux%20%7C%20Windows-lightgrey)
 ![Status](https://img.shields.io/badge/status-active-brightgreen)
