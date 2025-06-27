@@ -1,6 +1,3 @@
-# TODO d свойств -- ?
-
-
 from app.basic_game_core.field import Field
 from app.basic_game_core.node import Node
 from app.basic_game_core.player import Player
